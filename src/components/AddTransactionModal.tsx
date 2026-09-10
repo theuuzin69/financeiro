@@ -3,10 +3,22 @@ import { DEFAULT_CATEGORIES } from '@/lib/categories';
 import { TransactionType } from '@/types';
 import { X, Check, PenLine, TrendingDown, TrendingUp } from 'lucide-react';
 
+function parseAmountInput(val: string): number {
+  if (!val) return 0;
+  let cleaned = val.replace(/R\$\s*/i, '').replace(/[^\d.,]/g, '').trim();
+  if (cleaned.includes('.') && cleaned.includes(',')) {
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (cleaned.includes(',')) {
+    cleaned = cleaned.replace(',', '.');
+  }
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (newTx?: any) => void;
 }
 
 export function AddTransactionModal({ isOpen, onClose, onSuccess }: AddTransactionModalProps) {
@@ -28,9 +40,9 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess }: AddTransacti
     setLoading(true);
 
     try {
-      const parsedAmount = parseFloat(amount.replace(',', '.'));
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        setError('Digite um valor válido.');
+      const parsedAmount = parseAmountInput(amount);
+      if (parsedAmount <= 0) {
+        setError('Por favor, digite um valor maior que zero.');
         setLoading(false);
         return;
       }
@@ -58,7 +70,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess }: AddTransacti
         setMerchant('');
         setAmount('');
         setNotes('');
-        onSuccess();
+        onSuccess(data.transaction);
         onClose();
       } else {
         setError(data.error || 'Falha ao salvar lançamento');

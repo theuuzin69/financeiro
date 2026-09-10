@@ -92,66 +92,6 @@ function getInitialBudgets(): Record<string, BudgetGoal> {
   };
 }
 
-function getSeedTransactions(): Transaction[] {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-
-  return [
-    {
-      id: 'seed_1',
-      amount: 184.50,
-      type: 'expense',
-      merchant: 'Supermercado Pão de Açúcar',
-      rawMerchant: 'PAO DE ACUCAR 1204',
-      category: 'Alimentação & Mercado',
-      source: 'apple_pay',
-      paymentMethod: 'Apple Pay (Santander)',
-      cardLastDigits: '7821',
-      date: `${year}-${month}-02T18:30:00.000Z`,
-      createdAt: `${year}-${month}-02T18:30:00.000Z`,
-    },
-    {
-      id: 'seed_2',
-      amount: 32.90,
-      type: 'expense',
-      merchant: 'Uber Viagens',
-      rawMerchant: 'UBER *TRIP HELP.UBER',
-      category: 'Transporte & Combustível',
-      source: 'apple_pay',
-      paymentMethod: 'Apple Pay (Santander)',
-      cardLastDigits: '7821',
-      date: `${year}-${month}-04T08:15:00.000Z`,
-      createdAt: `${year}-${month}-04T08:15:00.000Z`,
-    },
-    {
-      id: 'seed_3',
-      amount: 79.90,
-      type: 'expense',
-      merchant: 'Restaurante Coco Bambu',
-      rawMerchant: 'PIX TRANSF COCO BAMBU',
-      category: 'Alimentação & Mercado',
-      source: 'santander_pix',
-      paymentMethod: 'Santander PIX',
-      date: `${year}-${month}-06T20:45:00.000Z`,
-      createdAt: `${year}-${month}-06T20:45:00.000Z`,
-    },
-    {
-      id: 'seed_4',
-      amount: 45.00,
-      type: 'expense',
-      merchant: 'Drogaria Raia',
-      rawMerchant: 'DROGA RAIA 451',
-      category: 'Saúde & Bem-estar',
-      source: 'santander_card',
-      paymentMethod: 'Cartão Santander final 7821',
-      cardLastDigits: '7821',
-      date: `${year}-${month}-08T14:20:00.000Z`,
-      createdAt: `${year}-${month}-08T14:20:00.000Z`,
-    },
-  ];
-}
-
 function getDefaultSalaryConfig(totalAmount: number = 3000.00): SalaryConfig {
   const half = Math.round((totalAmount / 2) * 100) / 100;
   const remainder = Math.round((totalAmount - half) * 100) / 100;
@@ -168,7 +108,7 @@ function getDefaultSalaryConfig(totalAmount: number = 3000.00): SalaryConfig {
 function getDefaultDatabase(): DatabaseSchema {
   return {
     initialized: true,
-    transactions: getSeedTransactions(),
+    transactions: [], // Nunca inicializa com transações fictícias
     fixedExpenses: getDefaultFixedExpenses(),
     monthlyIncome: 3000.00,
     salaryConfig: getDefaultSalaryConfig(3000.00),
@@ -197,9 +137,12 @@ export async function getDatabaseAsync(): Promise<DatabaseSchema> {
           if (parsed && typeof parsed === 'object') {
             memoryCache = {
               initialized: true,
-              transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+              transactions: Array.isArray(parsed.transactions) 
+                ? parsed.transactions.filter((t: any) => t && !String(t.id).startsWith('seed_') && !String(t.id).startsWith('tx_seed_')) 
+                : [],
               fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : getDefaultFixedExpenses(),
               monthlyIncome: parsed.monthlyIncome ?? 3000.00,
+              salaryConfig: parsed.salaryConfig || getDefaultSalaryConfig(parsed.monthlyIncome ?? 3000.00),
               budgets: parsed.budgets || getInitialBudgets(),
               webhookSecret: parsed.webhookSecret || DEFAULT_SECRET,
             };
@@ -225,9 +168,12 @@ export async function getDatabaseAsync(): Promise<DatabaseSchema> {
       const parsed = JSON.parse(raw);
       memoryCache = {
         initialized: true,
-        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+        transactions: Array.isArray(parsed.transactions) 
+          ? parsed.transactions.filter((t: any) => t && !String(t.id).startsWith('seed_') && !String(t.id).startsWith('tx_seed_')) 
+          : [],
         fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : getDefaultFixedExpenses(),
         monthlyIncome: parsed.monthlyIncome ?? 3000.00,
+        salaryConfig: parsed.salaryConfig || getDefaultSalaryConfig(parsed.monthlyIncome ?? 3000.00),
         budgets: parsed.budgets || getInitialBudgets(),
         webhookSecret: parsed.webhookSecret || DEFAULT_SECRET,
       };
@@ -290,9 +236,12 @@ export function readDatabase(): DatabaseSchema {
       const parsed = JSON.parse(raw);
       memoryCache = {
         initialized: true,
-        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+        transactions: Array.isArray(parsed.transactions) 
+          ? parsed.transactions.filter((t: any) => t && !String(t.id).startsWith('seed_') && !String(t.id).startsWith('tx_seed_')) 
+          : [],
         fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : getDefaultFixedExpenses(),
         monthlyIncome: parsed.monthlyIncome ?? 3000.00,
+        salaryConfig: parsed.salaryConfig || getDefaultSalaryConfig(parsed.monthlyIncome ?? 3000.00),
         budgets: parsed.budgets || getInitialBudgets(),
         webhookSecret: parsed.webhookSecret || DEFAULT_SECRET,
       };

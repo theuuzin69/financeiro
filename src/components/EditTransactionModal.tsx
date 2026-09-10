@@ -10,6 +10,18 @@ interface EditTransactionModalProps {
   onSuccess: () => void;
 }
 
+function parseAmountInput(val: string): number {
+  if (!val) return 0;
+  let cleaned = val.replace(/R\$\s*/i, '').replace(/[^\d.,]/g, '').trim();
+  if (cleaned.includes('.') && cleaned.includes(',')) {
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (cleaned.includes(',')) {
+    cleaned = cleaned.replace(',', '.');
+  }
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 export function EditTransactionModal({
   transaction,
   isOpen,
@@ -19,7 +31,7 @@ export function EditTransactionModal({
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState('');
-  const [category, setCategory] = useState(DEFAULT_CATEGORIES[0].name);
+  const [category, setCategory] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [notes, setNotes] = useState('');
@@ -46,8 +58,8 @@ export function EditTransactionModal({
     setError(null);
 
     try {
-      const parsedAmount = parseFloat(amount.replace(',', '.'));
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      const parsedAmount = parseAmountInput(amount);
+      if (parsedAmount <= 0) {
         setError('Por favor, digite um valor válido maior que zero.');
         setLoading(false);
         return;

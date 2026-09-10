@@ -103,14 +103,33 @@ export default function Home() {
   };
 
   const handleDeleteTransaction = async (id: string) => {
+    // 1. Atualização Otimista Imediata na tela (sem delay ou engasgos)
+    const previous = [...transactions];
+    setTransactions(prev => prev.filter(t => t.id !== id));
+
     try {
       const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-      if (res.ok) {
+      if (!res.ok) {
+        setTransactions(previous);
+      } else {
         loadData();
       }
     } catch (err) {
       console.error('Erro ao excluir transação:', err);
+      setTransactions(previous);
     }
+  };
+
+  const handleAddTransactionSuccess = (newTx?: Transaction) => {
+    if (newTx && newTx.date) {
+      const txMonth = newTx.date.slice(0, 7);
+      if (txMonth !== currentMonth) {
+        setCurrentMonth(txMonth);
+      } else {
+        setTransactions(prev => [newTx, ...prev]);
+      }
+    }
+    loadData();
   };
 
   if (loading && !analytics) {
@@ -325,7 +344,7 @@ export default function Home() {
       <AddTransactionModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSuccess={loadData}
+        onSuccess={handleAddTransactionSuccess}
       />
 
       {/* Barra Inferior */}

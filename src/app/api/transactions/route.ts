@@ -52,19 +52,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Valor da despesa inválido.' }, { status: 400 });
     }
 
-    const rawMerchant = body.merchant || 'Estabelecimento';
+    const rawMerchant = body.merchant ? String(body.merchant).trim() : 'Estabelecimento';
     const catResult = autoCategorize(rawMerchant);
+    const cleanMerchant = body.merchant ? String(body.merchant).trim() : catResult.cleanMerchant;
 
     const transaction = await addTransactionAsync({
       amount,
       type: body.type || 'expense',
-      merchant: catResult.cleanMerchant,
+      merchant: cleanMerchant,
       rawMerchant,
       category: body.category || catResult.category,
       source: body.source || 'manual',
       paymentMethod: body.paymentMethod || 'Manual',
       date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
-      notes: body.notes,
+      notes: body.notes ? String(body.notes).trim() : undefined,
     });
 
     return NextResponse.json({
