@@ -13,25 +13,74 @@ export interface DatabaseSchema {
   webhookSecret: string;
 }
 
-// Configurações de Nuvem (Vercel KV / Upstash Redis / Supabase)
-const KV_URL = 
-  process.env.KV_REST_API_URL || 
-  process.env.UPSTASH_REDIS_REST_URL || 
-  process.env.STORAGE_URL || 
-  process.env.STORAGE_REST_API_URL ||
-  process.env.REDIS_URL;
+// Configurações de Nuvem (Upstash Redis / Vercel KV)
+export function getUpstashCredentials(): { url?: string; token?: string; detectedKey?: string } {
+  // 1. Chaves conhecidas
+  const knownUrlKeys = [
+    'KV_REST_API_URL',
+    'UPSTASH_REDIS_REST_URL',
+    'STORAGE_REST_API_URL',
+    'STORAGE_URL',
+    'REDIS_URL',
+    'REDIS_REST_URL',
+  ];
+  const knownTokenKeys = [
+    'KV_REST_API_TOKEN',
+    'UPSTASH_REDIS_REST_TOKEN',
+    'STORAGE_REST_API_TOKEN',
+    'STORAGE_TOKEN',
+    'REDIS_TOKEN',
+    'REDIS_REST_TOKEN',
+  ];
 
-const KV_TOKEN = 
-  process.env.KV_REST_API_TOKEN || 
-  process.env.UPSTASH_REDIS_REST_TOKEN || 
-  process.env.STORAGE_TOKEN || 
-  process.env.STORAGE_REST_API_TOKEN ||
-  process.env.REDIS_TOKEN;
+  for (let i = 0; i < knownUrlKeys.length; i++) {
+    const u = process.env[knownUrlKeys[i]];
+    const t = process.env[knownTokenKeys[i]];
+    if (u && t) {
+      return { url: u, token: t, detectedKey: knownUrlKeys[i] };
+    }
+  }
+
+  // 2. Busca dinâmica por prefixos gerados automaticamente pelo Vercel Marketplace
+  // Exemplo: UPSTASH_KV_COQUELICOT_CHAIR_REST_API_URL
+  let foundUrl: string | undefined;
+  let foundToken: string | undefined;
+  let detectedKey: string | undefined;
+
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!value) continue;
+    const k = key.toUpperCase();
+
+    if (!foundUrl && (k.includes('REST_API_URL') || k.includes('REST_URL') || (k.includes('UPSTASH') && k.includes('URL')))) {
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        foundUrl = value;
+        detectedKey = key;
+      }
+    }
+
+    if (!foundToken && !k.includes('READ_ONLY') && (k.includes('REST_API_TOKEN') || k.includes('REST_TOKEN') || (k.includes('UPSTASH') && k.includes('TOKEN')))) {
+      foundToken = value;
+    }
+  }
+
+  // Fallback caso só tenha achado token com nome genérico
+  if (foundUrl && !foundToken) {
+    for (const [key, value] of Object.entries(process.env)) {
+      if (key.toUpperCase().includes('TOKEN') && value) {
+        foundToken = value;
+        break;
+      }
+    }
+  }
+
+  return { url: foundUrl, token: foundToken, detectedKey };
+}
 
 const KV_KEY = 'finance_pro_database';
 
 export function isCloudStorageConfigured(): boolean {
-  return Boolean(KV_URL && KV_TOKEN);
+  const creds = getUpstashCredentials();
+  return Boolean(creds.url && creds.token);
 }
 
 // No ambiente Vercel Serverless, process.cwd() é somente leitura.
@@ -126,32 +175,63 @@ function getDefaultDatabase(): DatabaseSchema {
  */
 export async function getDatabaseAsync(): Promise<DatabaseSchema> {
   // 1. Tenta buscar no Upstash Redis se configurado
-  if (KV_URL && KV_TOKEN) {
+  const creds = getUpstashCredentials();
+  if (creds.url && creds.token) {
     try {
-      const res = await fetch(`${KV_URL}/get/${KV_KEY}`, {
-        headers: {
-          Authorization: `Bearer ${KV_TOKEN}`,
-        },
-        cache: 'no-store',
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.result !== null && json.result !== undefined) {
-          const parsed = typeof json.result === 'string' ? JSON.parse(json.result) : json.result;
-          if (parsed && typeof parsed === 'object') {
-            memoryCache = {
-              initialized: true,
-              transactions: Array.isArray(parsed.transactions) 
-                ? parsed.transactions.filter((t: any) => t && !String(t.id).startsWith('seed_') && !String(t.id).startsWith('tx_seed_')) 
-                : [],
-              fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : getDefaultFixedExpenses(),
-              monthlyIncome: parsed.monthlyIncome ?? 3000.00,
-              salaryConfig: parsed.salaryConfig || getDefaultSalaryConfig(parsed.monthlyIncome ?? 3000.00),
-              budgets: parsed.budgets || getInitialBudgets(),
-              webhookSecret: parsed.webhookSecret || DEFAULT_SECRET,
-            };
-            return memoryCache;
+      let rawResult: any = null;
+
+      // Método 1: Chamada direta /get/:key
+      try {
+        const res = await fetch(`${creds.url}/get/${KV_KEY}`, {
+          headers: {
+            Authorization: `Bearer ${creds.token}`,
+          },
+          cache: 'no-store',
+        });
+        if (res.ok) {
+          const json = await res.json();
+          rawResult = json?.result;
+        }
+      } catch (err1) {
+        // Continua para o método 2
+      }
+
+      // Método 2 (Fallback): Comando oficial Upstash ["GET", key]
+      if (rawResult === null || rawResult === undefined) {
+        try {
+          const res = await fetch(creds.url, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${creds.token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(['GET', KV_KEY]),
+            cache: 'no-store',
+          });
+          if (res.ok) {
+            const json = await res.json();
+            rawResult = json?.result;
           }
+        } catch (err2) {
+          // Silencia
+        }
+      }
+
+      if (rawResult !== null && rawResult !== undefined) {
+        const parsed = typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult;
+        if (parsed && typeof parsed === 'object') {
+          memoryCache = {
+            initialized: true,
+            transactions: Array.isArray(parsed.transactions) 
+              ? parsed.transactions.filter((t: any) => t && !String(t.id).startsWith('seed_') && !String(t.id).startsWith('tx_seed_')) 
+              : [],
+            fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : getDefaultFixedExpenses(),
+            monthlyIncome: parsed.monthlyIncome ?? 3000.00,
+            salaryConfig: parsed.salaryConfig || getDefaultSalaryConfig(parsed.monthlyIncome ?? 3000.00),
+            budgets: parsed.budgets || getInitialBudgets(),
+            webhookSecret: parsed.webhookSecret || DEFAULT_SECRET,
+          };
+          return memoryCache;
         }
       }
     } catch (err) {
@@ -208,16 +288,32 @@ export async function saveDatabaseAsync(data: DatabaseSchema): Promise<void> {
     console.error('Aviso ao escrever em disco:', err);
   }
 
-  if (KV_URL && KV_TOKEN) {
+  const creds = getUpstashCredentials();
+  if (creds.url && creds.token) {
     try {
-      await fetch(`${KV_URL}/set/${KV_KEY}`, {
+      const dataStr = JSON.stringify(data);
+
+      // Método 1: Comando Oficial Upstash REST ["SET", key, value]
+      const resCmd = await fetch(creds.url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${KV_TOKEN}`,
+          Authorization: `Bearer ${creds.token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(['SET', KV_KEY, dataStr]),
       });
+
+      if (!resCmd.ok) {
+        // Método 2 (Fallback): /set/:key
+        await fetch(`${creds.url}/set/${KV_KEY}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${creds.token}`,
+            'Content-Type': 'application/json',
+          },
+          body: dataStr,
+        });
+      }
     } catch (e) {
       console.error('Erro ao sincronizar com Upstash KV:', e);
     }
@@ -275,15 +371,16 @@ export function writeDatabase(data: DatabaseSchema): void {
     console.error('Aviso ao escrever em disco:', err);
   }
 
-  if (KV_URL && KV_TOKEN) {
-    fetch(`${KV_URL}/set/${KV_KEY}`, {
+  const creds = getUpstashCredentials();
+  if (creds.url && creds.token) {
+    fetch(creds.url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${KV_TOKEN}`,
+        Authorization: `Bearer ${creds.token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
-    }).catch(e => console.error('Erro ao sincronizar com Vercel KV:', e));
+      body: JSON.stringify(['SET', KV_KEY, JSON.stringify(data)]),
+    }).catch(e => console.error('Erro ao sincronizar com Upstash KV:', e));
   }
 }
 

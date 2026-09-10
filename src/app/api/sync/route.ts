@@ -1,16 +1,33 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { 
   getDatabaseAsync, 
   saveDatabaseAsync, 
-  isCloudStorageConfigured 
+  isCloudStorageConfigured,
+  getUpstashCredentials
 } from '@/lib/storage';
 import { Transaction } from '@/types';
 
 export async function GET() {
-  const cloudConnected = isCloudStorageConfigured();
+  const creds = getUpstashCredentials();
+  let pingStatus = 'untested';
+
+  if (creds.url && creds.token) {
+    try {
+      const res = await fetch(`${creds.url}/get/finance_pro_database`, {
+        headers: { Authorization: `Bearer ${creds.token}` },
+        cache: 'no-store',
+      });
+      pingStatus = res.ok ? 'connected' : `http_${res.status}`;
+    } catch (e: any) {
+      pingStatus = `error: ${e.message}`;
+    }
+  }
+
   return NextResponse.json({
     success: true,
-    cloudConnected,
+    cloudConnected: isCloudStorageConfigured(),
+    detectedKey: creds.detectedKey || null,
+    pingStatus,
   });
 }
 
