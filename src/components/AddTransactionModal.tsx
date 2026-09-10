@@ -13,6 +13,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess }: AddTransacti
   const [type, setType] = useState<TransactionType>('expense');
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [category, setCategory] = useState(DEFAULT_CATEGORIES[0].name);
   const [paymentMethod, setPaymentMethod] = useState('Apple Pay');
   const [notes, setNotes] = useState('');
@@ -34,6 +35,9 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess }: AddTransacti
         return;
       }
 
+      // Constrói a data selecionada (meio-dia UTC para evitar problemas de fuso)
+      const txDate = date ? new Date(date + 'T12:00:00.000Z').toISOString() : new Date().toISOString();
+
       const res = await fetch('/api/transactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,7 +49,7 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess }: AddTransacti
           paymentMethod: type === 'income' ? (paymentMethod || 'Depósito / Pix') : paymentMethod,
           source: paymentMethod.includes('Apple') ? 'apple_pay' : paymentMethod.includes('Pix') ? 'santander_pix' : 'manual',
           notes: notes.trim() || undefined,
-          date: new Date().toISOString(),
+          date: txDate,
         }),
       });
 
@@ -137,18 +141,33 @@ export function AddTransactionModal({ isOpen, onClose, onSuccess }: AddTransacti
             />
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
-              Valor (R$)
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="0,00"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-base font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
+                Valor (R$)
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="0,00"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2.5 text-base font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
+                Data do Lançamento
+              </label>
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-zinc-900 transition-colors font-medium"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

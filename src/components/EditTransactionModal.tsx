@@ -18,6 +18,7 @@ export function EditTransactionModal({
 }: EditTransactionModalProps) {
   const [merchant, setMerchant] = useState('');
   const [amount, setAmount] = useState('');
+  const [date, setDate] = useState('');
   const [category, setCategory] = useState(DEFAULT_CATEGORIES[0].name);
   const [type, setType] = useState<TransactionType>('expense');
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -29,6 +30,7 @@ export function EditTransactionModal({
     if (transaction) {
       setMerchant(transaction.merchant);
       setAmount(String(transaction.amount));
+      setDate(transaction.date ? transaction.date.slice(0, 10) : new Date().toISOString().slice(0, 10));
       setCategory(transaction.category);
       setType(transaction.type || 'expense');
       setPaymentMethod(transaction.paymentMethod);
@@ -51,12 +53,15 @@ export function EditTransactionModal({
         return;
       }
 
+      const txDate = date ? new Date(date + 'T12:00:00.000Z').toISOString() : transaction.date;
+
       const res = await fetch(`/api/transactions/${transaction.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           merchant: merchant.trim(),
           amount: parsedAmount,
+          date: txDate,
           category,
           type,
           paymentMethod,
@@ -158,6 +163,21 @@ export function EditTransactionModal({
 
             <div>
               <label className="text-[11px] font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
+                Data do Lançamento
+              </label>
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 transition-colors font-medium"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
                 Categoria
               </label>
               <select
@@ -182,18 +202,18 @@ export function EditTransactionModal({
                 )}
               </select>
             </div>
-          </div>
 
-          <div>
-            <label className="text-[11px] font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
-              Forma de Pagamento
-            </label>
-            <input
-              type="text"
-              value={paymentMethod}
-              onChange={e => setPaymentMethod(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
-            />
+            <div>
+              <label className="text-[11px] font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
+                Forma de Pagamento
+              </label>
+              <input
+                type="text"
+                value={paymentMethod}
+                onChange={e => setPaymentMethod(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500 focus:bg-white dark:focus:bg-zinc-900 transition-colors"
+              />
+            </div>
           </div>
 
           <div>
