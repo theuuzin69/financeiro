@@ -1,0 +1,174 @@
+{
+  "transactions": [
+    {
+      "amount": 85,
+      "type": "expense",
+      "merchant": "Restaurante Sabor de Casa em",
+      "rawMerchant": "Santander: Pix enviado de R$ 85,00 para Restaurante Sabor de Casa em 10/09.",
+      "category": "Alimentação",
+      "source": "santander_pix",
+      "paymentMethod": "Santander PIX",
+      "date": "2026-09-10T14:23:09.457Z",
+      "notes": "Processado via automação Santander (Alta precisão)",
+      "id": "tx_1789050189459_eld6k",
+      "createdAt": "2026-09-10T14:23:09.459Z"
+    },
+    {
+      "amount": 24.5,
+      "type": "expense",
+      "merchant": "Starbucks Coffee",
+      "rawMerchant": "Starbucks Coffee",
+      "category": "Alimentação",
+      "source": "apple_pay",
+      "paymentMethod": "Apple Pay (Mastercard)",
+      "date": "2026-09-10T14:23:05.051Z",
+      "notes": "Simulação de teste Apple Pay",
+      "id": "tx_1789050185053_5imfl",
+      "createdAt": "2026-09-10T14:23:05.053Z"
+    },
+    {
+      "id": "tx_seed_1",
+      "amount": 284.5,
+      "type": "expense",
+      "merchant": "Supermercado Pão de Açúcar",
+      "rawMerchant": "PAG*PAO DE ACUCAR 1204",
+      "category": "Alimentação",
+      "source": "apple_pay",
+      "paymentMethod": "Apple Pay (Mastercard)",
+      "date": "2026-09-02T16:30:00.000Z",
+      "createdAt": "2026-09-02T16:30:00.000Z"
+    },
+    {
+      "id": "tx_seed_2",
+      "amount": 32.9,
+      "type": "expense",
+      "merchant": "Uber Viagens",
+      "rawMerchant": "UBER *TRIP BR",
+      "category": "Transporte",
+      "source": "apple_pay",
+      "paymentMethod": "Apple Pay (Visa)",
+      "date": "2026-09-03T08:45:00.000Z",
+      "createdAt": "2026-09-03T08:45:00.000Z"
+    },
+    {
+      "id": "tx_seed_3",
+      "amount": 45,
+      "type": "expense",
+      "merchant": "Padaria Dona Benta",
+      "rawMerchant": "PADARIA DONA BENTA PIX",
+      "category": "Alimentação",
+      "source": "santander_pix",
+      "paymentMethod": "Santander PIX",
+      "date": "2026-09-04T09:15:00.000Z",
+      "createdAt": "2026-09-04T09:15:00.000Z"
+    },
+    {
+      "id": "tx_seed_4",
+      "amount": 55.9,
+      "type": "expense",
+      "merchant": "Netflix Assinatura",
+      "rawMerchant": "NETFLIX.COM",
+      "category": "Lazer & Entretenimento",
+      "source": "santander_card",
+      "paymentMethod": "Cartão Santander final 7821",
+      "cardLastDigits": "7821",
+      "date": "2026-09-05T12:00:00.000Z",
+      "createdAt": "2026-09-05T12:00:00.000Z"
+    },
+    {
+      "id": "tx_seed_5",
+      "amount": 89.9,
+      "type": "expense",
+      "merchant": "iFood Delivery",
+      "rawMerchant": "IFOOD *REFEICOES SAO PAULO",
+      "category": "Alimentação",
+      "source": "apple_pay",
+      "paymentMethod": "Apple Pay (Mastercard)",
+      "date": "2026-09-06T20:10:00.000Z",
+      "createdAt": "2026-09-06T20:10:00.000Z"
+    },
+    {
+      "id": "tx_seed_6",
+      "amount": 145.2,
+      "type": "expense",
+      "merchant": "Drogaria Raia",
+      "rawMerchant": "DROGA RAIA 451",
+      "category": "Saúde & Bem-estar",
+      "source": "santander_card",
+      "paymentMethod": "Cartão Santander final 7821",
+      "cardLastDigits": "7821",
+      "date": "2026-09-07T14:20:00.000Z",
+      "createdAt": "2026-09-07T14:20:00.000Z"
+    },
+    {
+      "id": "tx_seed_7",
+      "amount": 210,
+      "type": "expense",
+      "merchant": "Posto Shell Ipiranga",
+      "rawMerchant": "POSTO SHELL AUTO POSTO",
+      "category": "Transporte",
+      "source": "apple_pay",
+      "paymentMethod": "Apple Pay (Mastercard)",
+      "date": "2026-09-08T17:40:00.000Z",
+      "createdAt": "2026-09-08T17:40:00.000Z"
+    },
+    {
+      "id": "tx_seed_8",
+      "amount": 119.9,
+      "type": "expense",
+      "merchant": "Smart Fit Academia",
+      "rawMerchant": "SMART FIT MENSALIDADE",
+      "category": "Saúde & Bem-estar",
+      "source": "santander_card",
+      "paymentMethod": "Cartão Santander final 7821",
+      "cardLastDigits": "7821",
+      "date": "2026-09-09T10:00:00.000Z",
+      "createdAt": "2026-09-09T10:00:00.000Z"
+    },
+    {
+      "id": "tx_seed_9",
+      "amount": 76.5,
+      "type": "expense",
+      "merchant": "iFood Pizzaria",
+      "rawMerchant": "IFOOD *PIZZA BELLA",
+      "category": "Alimentação",
+      "source": "santander_pix",
+      "paymentMethod": "Santander PIX",
+      "date": "2026-09-10T21:30:00.000Z",
+      "createdAt": "2026-09-10T21:30:00.000Z"
+    }
+  ],
+  "budgets": {
+    "2026-09": {
+      "month": "2026-09",
+      "totalLimit": 6350,
+      "categoryLimits": {
+        "Alimentação": 1500,
+        "Transporte": 600,
+        "Moradia & Contas": 2000,
+        "Lazer & Entretenimento": 500,
+        "Saúde & Bem-estar": 400,
+        "Compras & Vestuário": 600,
+        "Educação": 300,
+        "Serviços & Assinaturas": 250,
+        "Outros / Diversos": 200
+      }
+    },
+    "2026-10": {
+      "month": "2026-10",
+      "totalLimit": 6350,
+      "categoryLimits": {
+        "Alimentação": 1500,
+        "Transporte": 600,
+        "Moradia & Contas": 2000,
+        "Lazer & Entretenimento": 500,
+        "Saúde & Bem-estar": 400,
+        "Compras & Vestuário": 600,
+        "Educação": 300,
+        "Serviços & Assinaturas": 250,
+        "Outros / Diversos": 200
+      }
+    }
+  },
+  "webhookSecret": "iphone_secret_key_santander_2026"
+}
