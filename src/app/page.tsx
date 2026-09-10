@@ -335,9 +335,9 @@ export default function Home() {
               totalSpent={analytics.totalSpent}
             />
 
-            {/* Últimos Lançamentos (sem botão redundante de novo) */}
+            {/* Extrato de Lançamentos Completo e Rolável */}
             <TransactionList
-              transactions={transactions.slice(0, 5)}
+              transactions={transactions}
               onDelete={handleDeleteTransaction}
               onRefresh={loadData}
             />
