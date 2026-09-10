@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteFixedExpense, updateFixedExpense } from '@/lib/storage';
+import { deleteFixedExpenseAsync, updateFixedExpense } from '@/lib/storage';
 
 export async function DELETE(
   req: NextRequest,
@@ -7,7 +7,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const ok = deleteFixedExpense(id);
+    const ok = await deleteFixedExpenseAsync(id);
 
     if (!ok) {
       return NextResponse.json({ error: 'Gasto fixo não encontrado.' }, { status: 404 });

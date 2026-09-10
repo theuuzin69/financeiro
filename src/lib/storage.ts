@@ -4,6 +4,7 @@ import { BudgetGoal, FixedExpense, Transaction } from '@/types';
 import { DEFAULT_CATEGORIES } from './categories';
 
 export interface DatabaseSchema {
+  initialized?: boolean;
   transactions: Transaction[];
   fixedExpenses: FixedExpense[];
   monthlyIncome: number;
@@ -97,56 +98,46 @@ function getSeedTransactions(): Transaction[] {
 
   return [
     {
-      id: 'tx_seed_1',
-      amount: 85.50,
+      id: 'seed_1',
+      amount: 184.50,
       type: 'expense',
       merchant: 'Supermercado Pão de Açúcar',
-      rawMerchant: 'PAG*PAO DE ACUCAR',
-      category: 'Alimentação',
+      rawMerchant: 'PAO DE ACUCAR 1204',
+      category: 'Alimentação & Mercado',
       source: 'apple_pay',
-      paymentMethod: 'Apple Pay (Mastercard)',
-      date: `${year}-${month}-02T16:30:00.000Z`,
-      createdAt: `${year}-${month}-02T16:30:00.000Z`,
+      paymentMethod: 'Apple Pay (Santander)',
+      cardLastDigits: '7821',
+      date: `${year}-${month}-02T18:30:00.000Z`,
+      createdAt: `${year}-${month}-02T18:30:00.000Z`,
     },
     {
-      id: 'tx_seed_2',
-      amount: 24.90,
+      id: 'seed_2',
+      amount: 32.90,
       type: 'expense',
-      merchant: 'Uber',
-      rawMerchant: 'UBER *TRIP BR',
-      category: 'Transporte',
+      merchant: 'Uber Viagens',
+      rawMerchant: 'UBER *TRIP HELP.UBER',
+      category: 'Transporte & Combustível',
       source: 'apple_pay',
-      paymentMethod: 'Apple Pay (Visa)',
-      date: `${year}-${month}-03T08:45:00.000Z`,
-      createdAt: `${year}-${month}-03T08:45:00.000Z`,
+      paymentMethod: 'Apple Pay (Santander)',
+      cardLastDigits: '7821',
+      date: `${year}-${month}-04T08:15:00.000Z`,
+      createdAt: `${year}-${month}-04T08:15:00.000Z`,
     },
     {
-      id: 'tx_seed_3',
-      amount: 42.00,
+      id: 'seed_3',
+      amount: 79.90,
       type: 'expense',
-      merchant: 'Padaria Dona Benta',
-      rawMerchant: 'PADARIA DONA BENTA PIX',
-      category: 'Alimentação',
+      merchant: 'Restaurante Coco Bambu',
+      rawMerchant: 'PIX TRANSF COCO BAMBU',
+      category: 'Alimentação & Mercado',
       source: 'santander_pix',
       paymentMethod: 'Santander PIX',
-      date: `${year}-${month}-05T09:15:00.000Z`,
-      createdAt: `${year}-${month}-05T09:15:00.000Z`,
+      date: `${year}-${month}-06T20:45:00.000Z`,
+      createdAt: `${year}-${month}-06T20:45:00.000Z`,
     },
     {
-      id: 'tx_seed_4',
-      amount: 54.90,
-      type: 'expense',
-      merchant: 'iFood Lanche',
-      rawMerchant: 'IFOOD *LANCHES',
-      category: 'Alimentação',
-      source: 'apple_pay',
-      paymentMethod: 'Apple Pay (Mastercard)',
-      date: `${year}-${month}-07T20:10:00.000Z`,
-      createdAt: `${year}-${month}-07T20:10:00.000Z`,
-    },
-    {
-      id: 'tx_seed_5',
-      amount: 62.30,
+      id: 'seed_4',
+      amount: 45.00,
       type: 'expense',
       merchant: 'Drogaria Raia',
       rawMerchant: 'DROGA RAIA 451',
@@ -162,6 +153,7 @@ function getSeedTransactions(): Transaction[] {
 
 function getDefaultDatabase(): DatabaseSchema {
   return {
+    initialized: true,
     transactions: getSeedTransactions(),
     fixedExpenses: getDefaultFixedExpenses(),
     monthlyIncome: 3000.00,
@@ -171,7 +163,104 @@ function getDefaultDatabase(): DatabaseSchema {
 }
 
 /**
- * Lê o banco de dados da Nuvem (KV/Redis) ou arquivo sincronizado
+ * Lê o banco de dados da Nuvem (Upstash Redis) com fallback para arquivo
+ */
+export async function getDatabaseAsync(): Promise<DatabaseSchema> {
+  // 1. Tenta buscar no Upstash Redis se configurado
+  if (KV_URL && KV_TOKEN) {
+    try {
+      const res = await fetch(`${KV_URL}/get/${KV_KEY}`, {
+        headers: {
+          Authorization: `Bearer ${KV_TOKEN}`,
+        },
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.result !== null && json.result !== undefined) {
+          const parsed = typeof json.result === 'string' ? JSON.parse(json.result) : json.result;
+          if (parsed && typeof parsed === 'object') {
+            memoryCache = {
+              initialized: true,
+              transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+              fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : getDefaultFixedExpenses(),
+              monthlyIncome: parsed.monthlyIncome ?? 3000.00,
+              budgets: parsed.budgets || getInitialBudgets(),
+              webhookSecret: parsed.webhookSecret || DEFAULT_SECRET,
+            };
+            return memoryCache;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao ler do Upstash KV:', err);
+    }
+  }
+
+  // 2. Cache em memória da execução atual
+  if (memoryCache) {
+    return memoryCache;
+  }
+
+  // 3. Arquivo local
+  ensureDataDirectory();
+  if (fs.existsSync(DATA_FILE)) {
+    try {
+      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+      memoryCache = {
+        initialized: true,
+        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+        fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : getDefaultFixedExpenses(),
+        monthlyIncome: parsed.monthlyIncome ?? 3000.00,
+        budgets: parsed.budgets || getInitialBudgets(),
+        webhookSecret: parsed.webhookSecret || DEFAULT_SECRET,
+      };
+      return memoryCache;
+    } catch (err) {
+      console.error('Erro lendo banco local:', err);
+    }
+  }
+
+  // 4. Primeira inicialização caso não exista nada
+  const initial = getDefaultDatabase();
+  await saveDatabaseAsync(initial);
+  memoryCache = initial;
+  return initial;
+}
+
+/**
+ * Grava dados de forma assíncrona garantindo persistência na nuvem Upstash
+ */
+export async function saveDatabaseAsync(data: DatabaseSchema): Promise<void> {
+  data.initialized = true;
+  memoryCache = data;
+  ensureDataDirectory();
+
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Aviso ao escrever em disco:', err);
+  }
+
+  if (KV_URL && KV_TOKEN) {
+    try {
+      await fetch(`${KV_URL}/set/${KV_KEY}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${KV_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+    } catch (e) {
+      console.error('Erro ao sincronizar com Upstash KV:', e);
+    }
+  }
+}
+
+/**
+ * Lê o banco de forma síncrona (com cache)
  */
 export function readDatabase(): DatabaseSchema {
   if (memoryCache) {
@@ -185,8 +274,9 @@ export function readDatabase(): DatabaseSchema {
       const raw = fs.readFileSync(DATA_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
       memoryCache = {
-        transactions: parsed.transactions || [],
-        fixedExpenses: parsed.fixedExpenses || getDefaultFixedExpenses(),
+        initialized: true,
+        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+        fixedExpenses: Array.isArray(parsed.fixedExpenses) ? parsed.fixedExpenses : getDefaultFixedExpenses(),
         monthlyIncome: parsed.monthlyIncome ?? 3000.00,
         budgets: parsed.budgets || getInitialBudgets(),
         webhookSecret: parsed.webhookSecret || DEFAULT_SECRET,
@@ -204,9 +294,10 @@ export function readDatabase(): DatabaseSchema {
 }
 
 /**
- * Grava dados com suporte a Nuvem e persistência automática
+ * Grava síncrono com disparo assíncrono para nuvem
  */
 export function writeDatabase(data: DatabaseSchema): void {
+  data.initialized = true;
   memoryCache = data;
   ensureDataDirectory();
 
@@ -216,7 +307,6 @@ export function writeDatabase(data: DatabaseSchema): void {
     console.error('Aviso ao escrever em disco:', err);
   }
 
-  // Se o usuário conectou a Nuvem (Vercel KV ou Upstash Redis), sincroniza em background
   if (KV_URL && KV_TOKEN) {
     fetch(`${KV_URL}/set/${KV_KEY}`, {
       method: 'POST',
@@ -229,10 +319,28 @@ export function writeDatabase(data: DatabaseSchema): void {
   }
 }
 
-// Funções de Transações
+// Funções de Transações (Assíncronas & Síncronas)
+export async function getAllTransactionsAsync(): Promise<Transaction[]> {
+  const db = await getDatabaseAsync();
+  return db.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
 export function getAllTransactions(): Transaction[] {
   const db = readDatabase();
   return db.transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+export async function addTransactionAsync(tx: Omit<Transaction, 'id' | 'createdAt'>): Promise<Transaction> {
+  const db = await getDatabaseAsync();
+  const newTx: Transaction = {
+    ...tx,
+    id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+    createdAt: new Date().toISOString(),
+  };
+
+  db.transactions.unshift(newTx);
+  await saveDatabaseAsync(db);
+  return newTx;
 }
 
 export function addTransaction(tx: Omit<Transaction, 'id' | 'createdAt'>): Transaction {
@@ -248,6 +356,17 @@ export function addTransaction(tx: Omit<Transaction, 'id' | 'createdAt'>): Trans
   return newTx;
 }
 
+export async function deleteTransactionAsync(id: string): Promise<boolean> {
+  const db = await getDatabaseAsync();
+  const initialCount = db.transactions.length;
+  db.transactions = db.transactions.filter(t => t.id !== id);
+  if (db.transactions.length !== initialCount) {
+    await saveDatabaseAsync(db);
+    return true;
+  }
+  return false;
+}
+
 export function deleteTransaction(id: string): boolean {
   const db = readDatabase();
   const initialCount = db.transactions.length;
@@ -257,6 +376,20 @@ export function deleteTransaction(id: string): boolean {
     return true;
   }
   return false;
+}
+
+export async function updateTransactionAsync(id: string, updates: Partial<Transaction>): Promise<Transaction | null> {
+  const db = await getDatabaseAsync();
+  const index = db.transactions.findIndex(t => t.id === id);
+  if (index === -1) return null;
+
+  db.transactions[index] = {
+    ...db.transactions[index],
+    ...updates,
+    id,
+  };
+  await saveDatabaseAsync(db);
+  return db.transactions[index];
 }
 
 export function updateTransaction(id: string, updates: Partial<Transaction>): Transaction | null {
@@ -273,10 +406,28 @@ export function updateTransaction(id: string, updates: Partial<Transaction>): Tr
   return db.transactions[index];
 }
 
-// Funções de Gastos Fixos
+// Funções de Gastos Fixos (Assíncronas & Síncronas)
+export async function getFixedExpensesAsync(): Promise<FixedExpense[]> {
+  const db = await getDatabaseAsync();
+  return db.fixedExpenses || getDefaultFixedExpenses();
+}
+
 export function getFixedExpenses(): FixedExpense[] {
   const db = readDatabase();
   return db.fixedExpenses || getDefaultFixedExpenses();
+}
+
+export async function addFixedExpenseAsync(expense: Omit<FixedExpense, 'id'>): Promise<FixedExpense> {
+  const db = await getDatabaseAsync();
+  const newFixed: FixedExpense = {
+    ...expense,
+    id: 'fix_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+  };
+
+  if (!db.fixedExpenses) db.fixedExpenses = [];
+  db.fixedExpenses.push(newFixed);
+  await saveDatabaseAsync(db);
+  return newFixed;
 }
 
 export function addFixedExpense(expense: Omit<FixedExpense, 'id'>): FixedExpense {
@@ -290,6 +441,21 @@ export function addFixedExpense(expense: Omit<FixedExpense, 'id'>): FixedExpense
   db.fixedExpenses.push(newFixed);
   writeDatabase(db);
   return newFixed;
+}
+
+export async function updateFixedExpenseAsync(id: string, updates: Partial<FixedExpense>): Promise<FixedExpense | null> {
+  const db = await getDatabaseAsync();
+  if (!db.fixedExpenses) return null;
+  const index = db.fixedExpenses.findIndex(f => f.id === id);
+  if (index === -1) return null;
+
+  db.fixedExpenses[index] = {
+    ...db.fixedExpenses[index],
+    ...updates,
+    id,
+  };
+  await saveDatabaseAsync(db);
+  return db.fixedExpenses[index];
 }
 
 export function updateFixedExpense(id: string, updates: Partial<FixedExpense>): FixedExpense | null {
@@ -307,6 +473,18 @@ export function updateFixedExpense(id: string, updates: Partial<FixedExpense>): 
   return db.fixedExpenses[index];
 }
 
+export async function deleteFixedExpenseAsync(id: string): Promise<boolean> {
+  const db = await getDatabaseAsync();
+  if (!db.fixedExpenses) return false;
+  const initial = db.fixedExpenses.length;
+  db.fixedExpenses = db.fixedExpenses.filter(f => f.id !== id);
+  if (db.fixedExpenses.length !== initial) {
+    await saveDatabaseAsync(db);
+    return true;
+  }
+  return false;
+}
+
 export function deleteFixedExpense(id: string): boolean {
   const db = readDatabase();
   if (!db.fixedExpenses) return false;
@@ -319,16 +497,52 @@ export function deleteFixedExpense(id: string): boolean {
   return false;
 }
 
-// Renda Mensal
+// Renda Mensal (Assíncrona & Síncrona)
+export async function getMonthlyIncomeAsync(): Promise<number> {
+  const db = await getDatabaseAsync();
+  return db.monthlyIncome ?? 3000.00;
+}
+
 export function getMonthlyIncome(): number {
   const db = readDatabase();
   return db.monthlyIncome ?? 3000.00;
+}
+
+export async function setMonthlyIncomeAsync(income: number): Promise<void> {
+  const db = await getDatabaseAsync();
+  db.monthlyIncome = income;
+  await saveDatabaseAsync(db);
 }
 
 export function setMonthlyIncome(income: number): void {
   const db = readDatabase();
   db.monthlyIncome = income;
   writeDatabase(db);
+}
+
+// Orçamentos
+export async function getBudgetForMonthAsync(month: string): Promise<BudgetGoal> {
+  const db = await getDatabaseAsync();
+  if (db.budgets[month]) {
+    return db.budgets[month];
+  }
+
+  const categoryLimits: Record<string, number> = {};
+  let totalLimit = 0;
+  for (const cat of DEFAULT_CATEGORIES) {
+    categoryLimits[cat.name] = cat.defaultBudget;
+    totalLimit += cat.defaultBudget;
+  }
+
+  const newBudget: BudgetGoal = {
+    month,
+    totalLimit: db.monthlyIncome || 3000,
+    categoryLimits,
+  };
+
+  db.budgets[month] = newBudget;
+  await saveDatabaseAsync(db);
+  return newBudget;
 }
 
 // Orçamentos

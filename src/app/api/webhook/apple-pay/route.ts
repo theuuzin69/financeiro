@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addTransaction, getWebhookSecret } from '@/lib/storage';
+import { addTransactionAsync, getWebhookSecret } from '@/lib/storage';
 import { autoCategorize, cleanMerchantName } from '@/lib/categorizer';
 import { parseBRLAmount } from '@/lib/bank-parsers';
 
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const catResult = autoCategorize(rawMerchant, appleCategory);
 
     // Gravação da transação
-    const transaction = addTransaction({
+    const transaction = await addTransactionAsync({
       amount,
       type: 'expense',
       merchant: catResult.cleanMerchant,

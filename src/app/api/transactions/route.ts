@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addTransaction, getAllTransactions } from '@/lib/storage';
+import { addTransactionAsync, getAllTransactionsAsync } from '@/lib/storage';
 import { autoCategorize } from '@/lib/categorizer';
 import { parseBRLAmount } from '@/lib/bank-parsers';
 
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const source = searchParams.get('source');
     const search = searchParams.get('search')?.toLowerCase();
 
-    let transactions = getAllTransactions();
+    let transactions = await getAllTransactionsAsync();
 
     if (month) {
       transactions = transactions.filter(t => t.date.startsWith(month));
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     const rawMerchant = body.merchant || 'Estabelecimento';
     const catResult = autoCategorize(rawMerchant);
 
-    const transaction = addTransaction({
+    const transaction = await addTransactionAsync({
       amount,
       type: body.type || 'expense',
       merchant: catResult.cleanMerchant,

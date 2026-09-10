@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addFixedExpense, getFixedExpenses } from '@/lib/storage';
+import { addFixedExpenseAsync, getFixedExpensesAsync } from '@/lib/storage';
 import { parseBRLAmount } from '@/lib/bank-parsers';
 
 export async function GET() {
   try {
-    const list = getFixedExpenses();
+    const list = await getFixedExpensesAsync();
     return NextResponse.json({ success: true, fixedExpenses: list });
   } catch (err: any) {
     return NextResponse.json({ error: 'Erro ao buscar gastos fixos', details: err.message }, { status: 500 });
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nome do gasto fixo é obrigatório.' }, { status: 400 });
     }
 
-    const created = addFixedExpense({
+    const created = await addFixedExpenseAsync({
       name: body.name.trim(),
       amount,
       category: body.category || 'Outros / Diversos',

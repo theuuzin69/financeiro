@@ -1,13 +1,24 @@
-import { MonthlyAnalytics, TransactionSource } from '@/types';
-import { getAllTransactions, getBudgetForMonth, getFixedExpenses, getMonthlyIncome } from './storage';
+import { MonthlyAnalytics, TransactionSource, Transaction, BudgetGoal, FixedExpense } from '@/types';
+import { 
+  getAllTransactions, 
+  getAllTransactionsAsync,
+  getBudgetForMonth, 
+  getBudgetForMonthAsync,
+  getFixedExpenses, 
+  getFixedExpensesAsync,
+  getMonthlyIncome,
+  getMonthlyIncomeAsync 
+} from './storage';
 import { DEFAULT_CATEGORIES } from './categories';
 import { generateLiveAdvice } from './advice-engine';
 
-export function getMonthlyAnalytics(month: string): MonthlyAnalytics {
-  const allTransactions = getAllTransactions();
-  const budget = getBudgetForMonth(month);
-  const monthlyIncome = getMonthlyIncome();
-  const fixedExpensesList = getFixedExpenses();
+function calculateAnalytics(
+  allTransactions: Transaction[],
+  budget: BudgetGoal,
+  monthlyIncome: number,
+  fixedExpensesList: FixedExpense[],
+  month: string
+): MonthlyAnalytics {
 
   // 1. Total de Gastos Fixos Ativos
   const totalFixedExpenses = fixedExpensesList
@@ -165,4 +176,23 @@ export function getMonthlyAnalytics(month: string): MonthlyAnalytics {
     spendingBySource,
     adviceList,
   };
+}
+
+export function getMonthlyAnalytics(month: string): MonthlyAnalytics {
+  const allTransactions = getAllTransactions();
+  const budget = getBudgetForMonth(month);
+  const monthlyIncome = getMonthlyIncome();
+  const fixedExpensesList = getFixedExpenses();
+  return calculateAnalytics(allTransactions, budget, monthlyIncome, fixedExpensesList, month);
+}
+
+export async function getMonthlyAnalyticsAsync(month: string): Promise<MonthlyAnalytics> {
+  const [allTransactions, budget, monthlyIncome, fixedExpensesList] = await Promise.all([
+    getAllTransactionsAsync(),
+    getBudgetForMonthAsync(month),
+    getMonthlyIncomeAsync(),
+    getFixedExpensesAsync(),
+  ]);
+
+  return calculateAnalytics(allTransactions, budget, monthlyIncome, fixedExpensesList, month);
 }
