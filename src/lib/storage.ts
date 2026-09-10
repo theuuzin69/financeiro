@@ -12,8 +12,20 @@ export interface DatabaseSchema {
 }
 
 // Configurações de Nuvem (Vercel KV / Upstash Redis / Supabase)
-const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const KV_URL = 
+  process.env.KV_REST_API_URL || 
+  process.env.UPSTASH_REDIS_REST_URL || 
+  process.env.STORAGE_URL || 
+  process.env.STORAGE_REST_API_URL ||
+  process.env.REDIS_URL;
+
+const KV_TOKEN = 
+  process.env.KV_REST_API_TOKEN || 
+  process.env.UPSTASH_REDIS_REST_TOKEN || 
+  process.env.STORAGE_TOKEN || 
+  process.env.STORAGE_REST_API_TOKEN ||
+  process.env.REDIS_TOKEN;
+
 const KV_KEY = 'finance_pro_database';
 
 // No ambiente Vercel Serverless, process.cwd() é somente leitura.
