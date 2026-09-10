@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BudgetGoal } from '@/types';
-import { DEFAULT_CATEGORIES } from '@/lib/categories';
-import { X, Check, Target, DollarSign } from 'lucide-react';
+import { DEFAULT_CATEGORIES, calculateCategoryLimits, FIXED_EDUCATION_BUDGET } from '@/lib/categories';
+import { X, Check, Target, DollarSign, Sparkles } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 
 interface BudgetModalProps {
@@ -12,7 +12,7 @@ interface BudgetModalProps {
 }
 
 export function BudgetModal({ isOpen, onClose, month, onSuccess }: BudgetModalProps) {
-  const [totalBudget, setTotalBudget] = useState<number>(5000);
+  const [totalBudget, setTotalBudget] = useState<number>(3000);
   const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -24,8 +24,15 @@ export function BudgetModal({ isOpen, onClose, month, onSuccess }: BudgetModalPr
         .then(res => res.json())
         .then(data => {
           if (data.budget) {
-            setTotalBudget(data.budget.totalLimit || 5000);
-            setCategoryBudgets(data.budget.categoryLimits || {});
+            const limit = data.budget.totalLimit || 3000;
+            setTotalBudget(limit);
+            // Se os limites não estiverem definidos ou Educação for o antigo 300, calcula os limites dinâmicos
+            const incomingLimits = data.budget.categoryLimits || {};
+            if (!incomingLimits['Educação'] || incomingLimits['Educação'] === 300) {
+              setCategoryBudgets(calculateCategoryLimits(limit));
+            } else {
+              setCategoryBudgets(incomingLimits);
+            }
           }
         })
         .finally(() => setLoading(false));
@@ -40,6 +47,11 @@ export function BudgetModal({ isOpen, onClose, month, onSuccess }: BudgetModalPr
       ...prev,
       [catName]: num,
     }));
+  };
+
+  const handleAutoDistribute = () => {
+    const dynamicLimits = calculateCategoryLimits(totalBudget);
+    setCategoryBudgets(dynamicLimits);
   };
 
   const handleSave = async () => {
@@ -73,7 +85,7 @@ export function BudgetModal({ isOpen, onClose, month, onSuccess }: BudgetModalPr
               Metas de Orçamento ({month})
             </h3>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Defina o teto mensal para receber alertas antes de estourar seus gastos.
+              Tetos calculados proporcionalmente com Educação fixa em R$ 1.035,00.
             </p>
           </div>
           <button
@@ -88,14 +100,17 @@ export function BudgetModal({ isOpen, onClose, month, onSuccess }: BudgetModalPr
           {/* Orçamento Geral */}
           <div className="bg-zinc-900 p-4 rounded-2xl border border-zinc-800 space-y-1.5">
             <label className="text-xs font-bold text-white block">
-              Teto Máximo Mensal Geral (R$)
+              Teto Máximo Mensal Geral / Renda (R$)
             </label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-400">R$</span>
               <input
                 type="number"
                 value={totalBudget}
-                onChange={e => setTotalBudget(parseFloat(e.target.value) || 0)}
+                onChange={e => {
+                  const val = parseFloat(e.target.value) || 0;
+                  setTotalBudget(val);
+                }}
                 className="w-full bg-black/60 border border-zinc-700 rounded-xl pl-10 pr-4 py-2.5 text-base font-bold text-white focus:outline-none focus:border-amber-400"
               />
             </div>
@@ -106,13 +121,25 @@ export function BudgetModal({ isOpen, onClose, month, onSuccess }: BudgetModalPr
 
           {/* Orçamentos por Categoria */}
           <div className="space-y-2.5">
-            <h4 className="text-xs font-semibold uppercase text-zinc-400 tracking-wider">
-              Limites por Categoria
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold uppercase text-zinc-400 tracking-wider">
+                Limites por Categoria
+              </h4>
+              <button
+                type="button"
+                onClick={handleAutoDistribute}
+                className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 bg-amber-400/10 hover:bg-amber-400/20 px-2 py-1 rounded-lg transition-colors"
+                title="Recalcula os tetos com Educação fixa em R$ 1.035 e o restante proporcional à renda"
+              >
+                <Sparkles className="w-3 h-3" />
+                Distribuir pela Renda
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {DEFAULT_CATEGORIES.map(cat => {
-                const currentVal = categoryBudgets[cat.name] ?? cat.defaultBudget;
+                const isEdu = cat.name === 'Educação';
+                const currentVal = categoryBudgets[cat.name] ?? (isEdu ? FIXED_EDUCATION_BUDGET : cat.defaultBudget);
                 return (
                   <div key={cat.id} className="bg-zinc-900/80 border border-zinc-800/80 p-3 rounded-2xl flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
@@ -122,9 +149,16 @@ export function BudgetModal({ isOpen, onClose, month, onSuccess }: BudgetModalPr
                       >
                         <CategoryIcon name={cat.name} className="w-4 h-4" />
                       </div>
-                      <span className="text-xs font-semibold text-zinc-200 truncate">
-                        {cat.name}
-                      </span>
+                      <div className="min-w-0">
+                        <span className="text-xs font-semibold text-zinc-200 truncate block">
+                          {cat.name}
+                        </span>
+                        {isEdu && (
+                          <span className="text-[10px] text-amber-400 font-medium block">
+                            Fixo R$ 1.035
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="w-24 shrink-0">

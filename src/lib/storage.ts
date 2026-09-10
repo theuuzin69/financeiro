@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { BudgetGoal, FixedExpense, SalaryConfig, Transaction } from '@/types';
-import { DEFAULT_CATEGORIES } from './categories';
+import { DEFAULT_CATEGORIES, calculateCategoryLimits, FIXED_EDUCATION_BUDGET } from './categories';
+
 
 export interface DatabaseSchema {
   initialized?: boolean;
@@ -126,20 +127,14 @@ function getDefaultFixedExpenses(): FixedExpense[] {
   ];
 }
 
-function getInitialBudgets(): Record<string, BudgetGoal> {
+function getInitialBudgets(income: number = 3000.00): Record<string, BudgetGoal> {
   const currentMonth = new Date().toISOString().slice(0, 7);
-  const categoryLimits: Record<string, number> = {};
-  let totalLimit = 0;
-
-  for (const cat of DEFAULT_CATEGORIES) {
-    categoryLimits[cat.name] = cat.defaultBudget;
-    totalLimit += cat.defaultBudget;
-  }
+  const categoryLimits = calculateCategoryLimits(income);
 
   return {
     [currentMonth]: {
       month: currentMonth,
-      totalLimit: 3000,
+      totalLimit: income,
       categoryLimits,
     },
   };
@@ -159,13 +154,14 @@ function getDefaultSalaryConfig(totalAmount: number = 3000.00): SalaryConfig {
 }
 
 function getDefaultDatabase(): DatabaseSchema {
+  const defaultIncome = 3000.00;
   return {
     initialized: true,
     transactions: [], // Nunca inicializa com transações fictícias
     fixedExpenses: getDefaultFixedExpenses(),
-    monthlyIncome: 3000.00,
-    salaryConfig: getDefaultSalaryConfig(3000.00),
-    budgets: getInitialBudgets(),
+    monthlyIncome: defaultIncome,
+    salaryConfig: getDefaultSalaryConfig(defaultIncome),
+    budgets: getInitialBudgets(defaultIncome),
     webhookSecret: DEFAULT_SECRET,
   };
 }
@@ -603,6 +599,15 @@ export async function setSalaryConfigAsync(config: SalaryConfig): Promise<Salary
 
   db.salaryConfig = normalizedConfig;
   db.monthlyIncome = normalizedConfig.totalAmount;
+
+  // Atualiza automaticamente os tetos das categorias do mês corrente conforme a renda
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  db.budgets[currentMonth] = {
+    month: currentMonth,
+    totalLimit: normalizedConfig.totalAmount,
+    categoryLimits: calculateCategoryLimits(normalizedConfig.totalAmount),
+  };
+
   await saveDatabaseAsync(db);
   return normalizedConfig;
 }
@@ -617,6 +622,14 @@ export function setSalaryConfig(config: SalaryConfig): SalaryConfig {
 
   db.salaryConfig = normalizedConfig;
   db.monthlyIncome = normalizedConfig.totalAmount;
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  db.budgets[currentMonth] = {
+    month: currentMonth,
+    totalLimit: normalizedConfig.totalAmount,
+    categoryLimits: calculateCategoryLimits(normalizedConfig.totalAmount),
+  };
+
   writeDatabase(db);
   return normalizedConfig;
 }
@@ -638,6 +651,14 @@ export async function setMonthlyIncomeAsync(income: number): Promise<void> {
       db.salaryConfig.payments[0].amount = income;
     }
   }
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  db.budgets[currentMonth] = {
+    month: currentMonth,
+    totalLimit: income,
+    categoryLimits: calculateCategoryLimits(income),
+  };
+
   await saveDatabaseAsync(db);
 }
 
@@ -658,26 +679,38 @@ export function setMonthlyIncome(income: number): void {
       db.salaryConfig.payments[0].amount = income;
     }
   }
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  db.budgets[currentMonth] = {
+    month: currentMonth,
+    totalLimit: income,
+    categoryLimits: calculateCategoryLimits(income),
+  };
+
   writeDatabase(db);
 }
 
 // Orçamentos
 export async function getBudgetForMonthAsync(month: string): Promise<BudgetGoal> {
   const db = await getDatabaseAsync();
-  if (db.budgets[month]) {
-    return db.budgets[month];
+  const income = db.monthlyIncome || 3000;
+
+  const existing = db.budgets[month];
+  if (existing && existing.categoryLimits) {
+    // Se o teto de Educação for diferente de 1035 ou totalLimit diferente da renda, recalculamos
+    if (existing.categoryLimits['Educação'] !== FIXED_EDUCATION_BUDGET || existing.totalLimit !== income) {
+      existing.totalLimit = income;
+      existing.categoryLimits = calculateCategoryLimits(income);
+      db.budgets[month] = existing;
+      await saveDatabaseAsync(db);
+    }
+    return existing;
   }
 
-  const categoryLimits: Record<string, number> = {};
-  let totalLimit = 0;
-  for (const cat of DEFAULT_CATEGORIES) {
-    categoryLimits[cat.name] = cat.defaultBudget;
-    totalLimit += cat.defaultBudget;
-  }
-
+  const categoryLimits = calculateCategoryLimits(income);
   const newBudget: BudgetGoal = {
     month,
-    totalLimit: db.monthlyIncome || 3000,
+    totalLimit: income,
     categoryLimits,
   };
 
@@ -686,29 +719,47 @@ export async function getBudgetForMonthAsync(month: string): Promise<BudgetGoal>
   return newBudget;
 }
 
-// Orçamentos
+// Orçamentos síncrono
 export function getBudgetForMonth(month: string): BudgetGoal {
   const db = readDatabase();
-  if (db.budgets[month]) {
-    return db.budgets[month];
+  const income = db.monthlyIncome || 3000;
+
+  const existing = db.budgets[month];
+  if (existing && existing.categoryLimits) {
+    if (existing.categoryLimits['Educação'] !== FIXED_EDUCATION_BUDGET || existing.totalLimit !== income) {
+      existing.totalLimit = income;
+      existing.categoryLimits = calculateCategoryLimits(income);
+      db.budgets[month] = existing;
+      writeDatabase(db);
+    }
+    return existing;
   }
 
-  const categoryLimits: Record<string, number> = {};
-  let totalLimit = 0;
-  for (const cat of DEFAULT_CATEGORIES) {
-    categoryLimits[cat.name] = cat.defaultBudget;
-    totalLimit += cat.defaultBudget;
-  }
-
+  const categoryLimits = calculateCategoryLimits(income);
   const newBudget: BudgetGoal = {
     month,
-    totalLimit: db.monthlyIncome || 3000,
+    totalLimit: income,
     categoryLimits,
   };
 
   db.budgets[month] = newBudget;
   writeDatabase(db);
   return newBudget;
+}
+
+export async function updateBudgetAsync(month: string, budget: Partial<BudgetGoal>): Promise<BudgetGoal> {
+  const db = await getDatabaseAsync();
+  const current = await getBudgetForMonthAsync(month);
+
+  const updated: BudgetGoal = {
+    ...current,
+    ...budget,
+    month,
+  };
+
+  db.budgets[month] = updated;
+  await saveDatabaseAsync(db);
+  return updated;
 }
 
 export function updateBudget(month: string, budget: Partial<BudgetGoal>): BudgetGoal {

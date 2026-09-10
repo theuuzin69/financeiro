@@ -11,7 +11,8 @@ import {
   getSalaryConfig,
   getSalaryConfigAsync
 } from './storage';
-import { DEFAULT_CATEGORIES } from './categories';
+import { DEFAULT_CATEGORIES, FIXED_EDUCATION_BUDGET } from './categories';
+
 import { generateLiveAdvice } from './advice-engine';
 
 export function calculateNextSalaryPayment(
@@ -133,7 +134,12 @@ function calculateAnalytics(
 
   const categoryBreakdown = DEFAULT_CATEGORIES.map(cat => {
     const amount = catSpendingMap[cat.name] || 0;
-    const catBudget = budget.categoryLimits[cat.name] || cat.defaultBudget;
+    let catBudget = budget?.categoryLimits?.[cat.name];
+    if (cat.name === 'Educação' && (!catBudget || catBudget === 300)) {
+      catBudget = FIXED_EDUCATION_BUDGET;
+    } else if (catBudget === undefined || catBudget === null) {
+      catBudget = cat.defaultBudget;
+    }
     const percentage = totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0;
     const catBudgetPct = catBudget > 0 ? Math.round((amount / catBudget) * 100) : 0;
 
