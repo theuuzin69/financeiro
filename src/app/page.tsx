@@ -19,7 +19,9 @@ import {
   ArrowRight,
   Lightbulb,
   Sun,
-  Moon
+  Moon,
+  Database,
+  AlertCircle
 } from 'lucide-react';
 
 export default function Home() {
@@ -34,6 +36,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isCloudConnected, setIsCloudConnected] = useState<boolean | null>(null);
   const [secretKey] = useState('iphone_secret_key_santander_2026');
 
   // Inicialização e persistência do Tema Claro / Escuro
@@ -59,6 +62,18 @@ export default function Home() {
     }
   };
 
+  // Verifica se o banco de dados na nuvem (Vercel KV) está conectado
+  useEffect(() => {
+    fetch('/api/sync')
+      .then(res => res.json())
+      .then(data => {
+        if (typeof data.cloudConnected === 'boolean') {
+          setIsCloudConnected(data.cloudConnected);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const loadData = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     try {
@@ -70,12 +85,39 @@ export default function Home() {
       const dataAnalytics = await resAnalytics.json();
       const dataTx = await resTx.json();
 
+      let serverTransactions: Transaction[] = dataTx.transactions || [];
+
+      // 🛡️ PROTEÇÃO CONTRA PERDA EM DEPLOYS DA VERCEL:
+      // Se o servidor retornou dados válidos, salva um backup seguro no navegador
+      if (serverTransactions.length > 0) {
+        localStorage.setItem(`finance_backup_tx_${currentMonth}`, JSON.stringify(serverTransactions));
+      } else {
+        // Se o servidor voltou vazio (ex: deploy recente em container limpo sem KV conectado),
+        // mas este aparelho possui dados locais salvos:
+        try {
+          const rawBackup = localStorage.getItem(`finance_backup_tx_${currentMonth}`);
+          if (rawBackup) {
+            const parsedBackup: Transaction[] = JSON.parse(rawBackup);
+            if (Array.isArray(parsedBackup) && parsedBackup.length > 0) {
+              console.log('Restaurando dados locais salvos para o servidor...');
+              serverTransactions = parsedBackup;
+              // Envia para o servidor persistir
+              fetch('/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transactions: parsedBackup }),
+              }).catch(console.error);
+            }
+          }
+        } catch (e) {
+          console.error('Erro ao restaurar backup local:', e);
+        }
+      }
+
       if (dataAnalytics.data) {
         setAnalytics(dataAnalytics.data);
       }
-      if (dataTx.transactions) {
-        setTransactions(dataTx.transactions);
-      }
+      setTransactions(serverTransactions);
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
     } finally {
@@ -105,18 +147,22 @@ export default function Home() {
   const handleDeleteTransaction = async (id: string) => {
     // 1. Atualização Otimista Imediata na tela (sem delay ou engasgos)
     const previous = [...transactions];
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    const updated = transactions.filter(t => t.id !== id);
+    setTransactions(updated);
+    localStorage.setItem(`finance_backup_tx_${currentMonth}`, JSON.stringify(updated));
 
     try {
       const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         setTransactions(previous);
+        localStorage.setItem(`finance_backup_tx_${currentMonth}`, JSON.stringify(previous));
       } else {
         loadData();
       }
     } catch (err) {
       console.error('Erro ao excluir transação:', err);
       setTransactions(previous);
+      localStorage.setItem(`finance_backup_tx_${currentMonth}`, JSON.stringify(previous));
     }
   };
 
@@ -126,7 +172,11 @@ export default function Home() {
       if (txMonth !== currentMonth) {
         setCurrentMonth(txMonth);
       } else {
-        setTransactions(prev => [newTx, ...prev]);
+        setTransactions(prev => {
+          const updated = [newTx, ...prev];
+          localStorage.setItem(`finance_backup_tx_${currentMonth}`, JSON.stringify(updated));
+          return updated;
+        });
       }
     }
     loadData();
@@ -204,6 +254,19 @@ export default function Home() {
 
       {/* Conteúdo Principal */}
       <main className="max-w-xl mx-auto w-full px-4 pt-3.5 space-y-4 flex-1">
+        {/* Alerta de Banco em Nuvem (se Vercel KV não estiver conectado) */}
+        {isCloudConnected === false && (
+          <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl p-3.5 text-xs text-slate-800 dark:text-zinc-200 space-y-1 shadow-xs animate-fadeIn">
+            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400 font-bold">
+              <Database className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>Banco em Nuvem não conectado (Dados protegidos neste celular)</span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-zinc-400 leading-relaxed">
+              O Vercel apaga o disco temporário em cada deploy de código. Seus lançamentos já foram salvos no backup deste aparelho, mas para sincronizar 100% na nuvem e receber webhooks mesmo com o app fechado, ative o <strong>Vercel KV</strong> gratuitamente na aba <em>Storage</em> da sua Vercel.
+            </p>
+          </div>
+        )}
+
         {/* Seletor de Mês */}
         <div className="flex items-center justify-between bg-white dark:bg-[#121216] border border-slate-200/90 dark:border-zinc-800/80 px-3 py-2 rounded-2xl shadow-sm dark:shadow-none transition-colors">
           <button

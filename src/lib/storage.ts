@@ -30,6 +30,10 @@ const KV_TOKEN =
 
 const KV_KEY = 'finance_pro_database';
 
+export function isCloudStorageConfigured(): boolean {
+  return Boolean(KV_URL && KV_TOKEN);
+}
+
 // No ambiente Vercel Serverless, process.cwd() é somente leitura.
 // Usamos /tmp no servidor ou a pasta local durante o desenvolvimento.
 const IS_VERCEL = Boolean(process.env.VERCEL);
