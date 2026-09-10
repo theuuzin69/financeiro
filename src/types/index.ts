@@ -60,6 +60,18 @@ export interface DynamicAdvice {
   level: 'good' | 'attention' | 'urgent';
 }
 
+export interface SalaryPayment {
+  day: number; // Dia do mês (1 a 31)
+  amount: number;
+  label?: string; // ex: 'Salário', 'Adiantamento', 'Vale'
+}
+
+export interface SalaryConfig {
+  frequency: 'single' | 'split'; // 1x ou 2x por mês
+  totalAmount: number;
+  payments: SalaryPayment[];
+}
+
 export interface FinancialInsight {
   id: string;
   type: 'overconsumption' | 'saving_tip' | 'pattern' | 'milestone';
@@ -110,4 +122,13 @@ export interface MonthlyAnalytics {
     count: number;
   }[];
   adviceList: DynamicAdvice[];
+  salaryConfig?: SalaryConfig;
+  nextSalaryPayment?: {
+    day: number;
+    amount: number;
+    daysRemaining: number;
+    isToday: boolean;
+    isNextMonth?: boolean;
+    label: string;
+  };
 }

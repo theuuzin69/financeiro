@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { BudgetGoal, FixedExpense, Transaction } from '@/types';
+import { BudgetGoal, FixedExpense, SalaryConfig, Transaction } from '@/types';
 import { DEFAULT_CATEGORIES } from './categories';
 
 export interface DatabaseSchema {
@@ -8,6 +8,7 @@ export interface DatabaseSchema {
   transactions: Transaction[];
   fixedExpenses: FixedExpense[];
   monthlyIncome: number;
+  salaryConfig?: SalaryConfig;
   budgets: Record<string, BudgetGoal>; // key: YYYY-MM
   webhookSecret: string;
 }
@@ -151,12 +152,26 @@ function getSeedTransactions(): Transaction[] {
   ];
 }
 
+function getDefaultSalaryConfig(totalAmount: number = 3000.00): SalaryConfig {
+  const half = Math.round((totalAmount / 2) * 100) / 100;
+  const remainder = Math.round((totalAmount - half) * 100) / 100;
+  return {
+    frequency: 'split',
+    totalAmount,
+    payments: [
+      { day: 5, amount: half, label: 'Salário' },
+      { day: 20, amount: remainder, label: 'Adiantamento' },
+    ],
+  };
+}
+
 function getDefaultDatabase(): DatabaseSchema {
   return {
     initialized: true,
     transactions: getSeedTransactions(),
     fixedExpenses: getDefaultFixedExpenses(),
     monthlyIncome: 3000.00,
+    salaryConfig: getDefaultSalaryConfig(3000.00),
     budgets: getInitialBudgets(),
     webhookSecret: DEFAULT_SECRET,
   };
@@ -497,7 +512,7 @@ export function deleteFixedExpense(id: string): boolean {
   return false;
 }
 
-// Renda Mensal (Assíncrona & Síncrona)
+// Renda Mensal e Configuração de Salário (Assíncrona & Síncrona)
 export async function getMonthlyIncomeAsync(): Promise<number> {
   const db = await getDatabaseAsync();
   return db.monthlyIncome ?? 3000.00;
@@ -508,15 +523,91 @@ export function getMonthlyIncome(): number {
   return db.monthlyIncome ?? 3000.00;
 }
 
+export async function getSalaryConfigAsync(): Promise<SalaryConfig> {
+  const db = await getDatabaseAsync();
+  if (db.salaryConfig && db.salaryConfig.payments && db.salaryConfig.payments.length > 0) {
+    return db.salaryConfig;
+  }
+  const income = db.monthlyIncome || 3000.00;
+  return getDefaultSalaryConfig(income);
+}
+
+export function getSalaryConfig(): SalaryConfig {
+  const db = readDatabase();
+  if (db.salaryConfig && db.salaryConfig.payments && db.salaryConfig.payments.length > 0) {
+    return db.salaryConfig;
+  }
+  const income = db.monthlyIncome || 3000.00;
+  return getDefaultSalaryConfig(income);
+}
+
+export async function setSalaryConfigAsync(config: SalaryConfig): Promise<SalaryConfig> {
+  const db = await getDatabaseAsync();
+  
+  // Calcula o totalAmount a partir das parcelas caso não venha informado
+  const total = config.payments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+  const normalizedConfig: SalaryConfig = {
+    ...config,
+    totalAmount: total > 0 ? total : config.totalAmount,
+  };
+
+  db.salaryConfig = normalizedConfig;
+  db.monthlyIncome = normalizedConfig.totalAmount;
+  await saveDatabaseAsync(db);
+  return normalizedConfig;
+}
+
+export function setSalaryConfig(config: SalaryConfig): SalaryConfig {
+  const db = readDatabase();
+  const total = config.payments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+  const normalizedConfig: SalaryConfig = {
+    ...config,
+    totalAmount: total > 0 ? total : config.totalAmount,
+  };
+
+  db.salaryConfig = normalizedConfig;
+  db.monthlyIncome = normalizedConfig.totalAmount;
+  writeDatabase(db);
+  return normalizedConfig;
+}
+
 export async function setMonthlyIncomeAsync(income: number): Promise<void> {
   const db = await getDatabaseAsync();
   db.monthlyIncome = income;
+  if (db.salaryConfig && db.salaryConfig.frequency === 'split') {
+    const half = Math.round((income / 2) * 100) / 100;
+    const remainder = Math.round((income - half) * 100) / 100;
+    db.salaryConfig.totalAmount = income;
+    if (db.salaryConfig.payments.length >= 2) {
+      db.salaryConfig.payments[0].amount = half;
+      db.salaryConfig.payments[1].amount = remainder;
+    }
+  } else if (db.salaryConfig) {
+    db.salaryConfig.totalAmount = income;
+    if (db.salaryConfig.payments.length >= 1) {
+      db.salaryConfig.payments[0].amount = income;
+    }
+  }
   await saveDatabaseAsync(db);
 }
 
 export function setMonthlyIncome(income: number): void {
   const db = readDatabase();
   db.monthlyIncome = income;
+  if (db.salaryConfig && db.salaryConfig.frequency === 'split') {
+    const half = Math.round((income / 2) * 100) / 100;
+    const remainder = Math.round((income - half) * 100) / 100;
+    db.salaryConfig.totalAmount = income;
+    if (db.salaryConfig.payments.length >= 2) {
+      db.salaryConfig.payments[0].amount = half;
+      db.salaryConfig.payments[1].amount = remainder;
+    }
+  } else if (db.salaryConfig) {
+    db.salaryConfig.totalAmount = income;
+    if (db.salaryConfig.payments.length >= 1) {
+      db.salaryConfig.payments[0].amount = income;
+    }
+  }
   writeDatabase(db);
 }
 

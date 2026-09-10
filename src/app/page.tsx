@@ -218,6 +218,8 @@ export default function Home() {
               freeBalance={analytics.freeBalanceRemaining}
               safeDaily={analytics.safeDailyAllowance}
               daysRemaining={analytics.daysRemainingInMonth}
+              salaryConfig={analytics.salaryConfig}
+              nextSalaryPayment={analytics.nextSalaryPayment}
               onEditIncome={() => setIsIncomeModalOpen(true)}
             />
 
@@ -316,6 +318,7 @@ export default function Home() {
         isOpen={isIncomeModalOpen}
         onClose={() => setIsIncomeModalOpen(false)}
         currentIncome={analytics?.monthlyIncome ?? 3000}
+        salaryConfig={analytics?.salaryConfig}
         onSuccess={loadData}
       />
 

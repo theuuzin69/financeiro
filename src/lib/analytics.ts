@@ -1,4 +1,4 @@
-import { MonthlyAnalytics, TransactionSource, Transaction, BudgetGoal, FixedExpense } from '@/types';
+import { MonthlyAnalytics, TransactionSource, Transaction, BudgetGoal, FixedExpense, SalaryConfig } from '@/types';
 import { 
   getAllTransactions, 
   getAllTransactionsAsync,
@@ -7,17 +7,67 @@ import {
   getFixedExpenses, 
   getFixedExpensesAsync,
   getMonthlyIncome,
-  getMonthlyIncomeAsync 
+  getMonthlyIncomeAsync,
+  getSalaryConfig,
+  getSalaryConfigAsync
 } from './storage';
 import { DEFAULT_CATEGORIES } from './categories';
 import { generateLiveAdvice } from './advice-engine';
+
+export function calculateNextSalaryPayment(
+  salaryConfig?: SalaryConfig, 
+  referenceDate: Date = new Date()
+) {
+  if (!salaryConfig || !salaryConfig.payments || salaryConfig.payments.length === 0) {
+    return undefined;
+  }
+
+  const currentDay = referenceDate.getDate();
+  const currentMonth = referenceDate.getMonth();
+  const currentYear = referenceDate.getFullYear();
+  const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+  // Ordena os pagamentos por dia crescente
+  const sorted = [...salaryConfig.payments].sort((a, b) => a.day - b.day);
+
+  // Procura se tem algum pagamento ainda neste mês (a partir de hoje)
+  const upcomingThisMonth = sorted.find(p => p.day >= currentDay);
+
+  if (upcomingThisMonth) {
+    const isToday = upcomingThisMonth.day === currentDay;
+    const daysRemaining = upcomingThisMonth.day - currentDay;
+    return {
+      day: upcomingThisMonth.day,
+      amount: upcomingThisMonth.amount,
+      label: upcomingThisMonth.label || `Dia ${upcomingThisMonth.day}`,
+      daysRemaining,
+      isToday,
+      isNextMonth: false,
+    };
+  }
+
+  // Se todos do mês já passaram, o próximo é a primeira parcela do mês seguinte
+  const firstNextMonth = sorted[0];
+  const daysRemainingInMonth = daysInCurrentMonth - currentDay;
+  const daysRemaining = daysRemainingInMonth + firstNextMonth.day;
+
+  return {
+    day: firstNextMonth.day,
+    amount: firstNextMonth.amount,
+    label: firstNextMonth.label || `Dia ${firstNextMonth.day}`,
+    daysRemaining,
+    isToday: false,
+    isNextMonth: true,
+  };
+}
 
 function calculateAnalytics(
   allTransactions: Transaction[],
   budget: BudgetGoal,
   monthlyIncome: number,
   fixedExpensesList: FixedExpense[],
-  month: string
+  month: string,
+  salaryConfig?: SalaryConfig
 ): MonthlyAnalytics {
 
   // 1. Total de Gastos Fixos Ativos
@@ -155,6 +205,9 @@ function calculateAnalytics(
     currentMonth: month,
   });
 
+  // 8. Próximo recebimento salarial
+  const nextSalaryPayment = calculateNextSalaryPayment(salaryConfig, now);
+
   return {
     currentMonth: month,
     monthlyIncome,
@@ -175,6 +228,8 @@ function calculateAnalytics(
     dailySpending,
     spendingBySource,
     adviceList,
+    salaryConfig,
+    nextSalaryPayment,
   };
 }
 
@@ -183,16 +238,18 @@ export function getMonthlyAnalytics(month: string): MonthlyAnalytics {
   const budget = getBudgetForMonth(month);
   const monthlyIncome = getMonthlyIncome();
   const fixedExpensesList = getFixedExpenses();
-  return calculateAnalytics(allTransactions, budget, monthlyIncome, fixedExpensesList, month);
+  const salaryConfig = getSalaryConfig();
+  return calculateAnalytics(allTransactions, budget, monthlyIncome, fixedExpensesList, month, salaryConfig);
 }
 
 export async function getMonthlyAnalyticsAsync(month: string): Promise<MonthlyAnalytics> {
-  const [allTransactions, budget, monthlyIncome, fixedExpensesList] = await Promise.all([
+  const [allTransactions, budget, monthlyIncome, fixedExpensesList, salaryConfig] = await Promise.all([
     getAllTransactionsAsync(),
     getBudgetForMonthAsync(month),
     getMonthlyIncomeAsync(),
     getFixedExpensesAsync(),
+    getSalaryConfigAsync(),
   ]);
 
-  return calculateAnalytics(allTransactions, budget, monthlyIncome, fixedExpensesList, month);
+  return calculateAnalytics(allTransactions, budget, monthlyIncome, fixedExpensesList, month, salaryConfig);
 }

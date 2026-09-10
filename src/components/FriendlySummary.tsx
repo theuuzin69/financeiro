@@ -5,8 +5,10 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
-  Edit2
+  Edit2,
+  Calendar
 } from 'lucide-react';
+import { SalaryConfig } from '@/types';
 
 interface FriendlySummaryProps {
   income: number;
@@ -16,6 +18,15 @@ interface FriendlySummaryProps {
   freeBalance: number;
   safeDaily: number;
   daysRemaining: number;
+  salaryConfig?: SalaryConfig;
+  nextSalaryPayment?: {
+    day: number;
+    amount: number;
+    daysRemaining: number;
+    isToday: boolean;
+    isNextMonth?: boolean;
+    label: string;
+  };
   onEditIncome: () => void;
 }
 
@@ -27,6 +38,8 @@ export function FriendlySummary({
   freeBalance,
   safeDaily,
   daysRemaining,
+  salaryConfig,
+  nextSalaryPayment,
   onEditIncome,
 }: FriendlySummaryProps) {
   const [showExplanation, setShowExplanation] = useState(false);
@@ -71,15 +84,24 @@ export function FriendlySummary({
               </span>
             )}
           </p>
+
+          {nextSalaryPayment && (
+            <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-[11px] font-medium text-emerald-800 dark:text-emerald-300">
+              <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>
+                Próximo pagamento ({nextSalaryPayment.label}): <strong className="font-bold">R$ {nextSalaryPayment.amount.toFixed(2)}</strong> {nextSalaryPayment.isToday ? '• Cai hoje! 🎉' : `• em ${nextSalaryPayment.daysRemaining} ${nextSalaryPayment.daysRemaining === 1 ? 'dia' : 'dias'}`}
+              </span>
+            </div>
+          )}
         </div>
 
         <button
           onClick={onEditIncome}
-          className="text-[11px] font-semibold text-emerald-800 dark:text-zinc-300 hover:text-emerald-900 dark:hover:text-white bg-emerald-50 hover:bg-emerald-100 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-zinc-700/60 flex items-center gap-1.5 transition-all shadow-xs"
-          title="Ajustar seu salário fixo"
+          className="text-[11px] font-semibold text-emerald-800 dark:text-zinc-300 hover:text-emerald-900 dark:hover:text-white bg-emerald-50 hover:bg-emerald-100 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-zinc-700/60 flex items-center gap-1.5 transition-all shadow-xs shrink-0"
+          title="Configurar datas e valores do salário"
         >
           <Edit2 className="w-3 h-3 text-emerald-600 dark:text-zinc-400" />
-          Salário: R$ {income.toFixed(0)}
+          Salário: R$ {income.toFixed(0)} {salaryConfig?.frequency === 'split' ? '(2x)' : ''}
         </button>
       </div>
 
@@ -113,8 +135,10 @@ export function FriendlySummary({
           <span className="text-xs sm:text-sm font-black text-emerald-800 dark:text-emerald-300 mt-1">
             + R$ {totalGrossIncome.toFixed(0)}
           </span>
-          <span className="text-[9px] text-emerald-700/80 dark:text-zinc-500 mt-0.5 font-medium">
-            {extraIncome > 0 ? `Salário + R$ ${extraIncome.toFixed(0)}` : 'Salário líquido'}
+          <span className="text-[9px] text-emerald-700/80 dark:text-zinc-500 mt-0.5 font-medium leading-tight">
+            {salaryConfig?.frequency === 'split' && salaryConfig.payments.length >= 2
+              ? `Em 2x: Dias ${salaryConfig.payments[0].day} e ${salaryConfig.payments[1].day}`
+              : extraIncome > 0 ? `Salário + R$ ${extraIncome.toFixed(0)}` : 'Salário líquido'}
           </span>
         </div>
 
@@ -151,7 +175,7 @@ export function FriendlySummary({
         {showExplanation && (
           <div className="mt-2.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs text-slate-700 dark:text-zinc-300 space-y-2 animate-fadeIn leading-relaxed">
             <p>
-              • <strong>Renda Total (R$ {totalGrossIncome.toFixed(0)}):</strong> Seu salário de R$ {income.toFixed(0)}{extraIncome > 0 ? ` somado a R$ ${extraIncome.toFixed(2)} de rendas extras neste mês` : ''}.
+              • <strong>Renda Total (R$ {totalGrossIncome.toFixed(0)}):</strong> Seu salário de R$ {income.toFixed(0)}{salaryConfig?.frequency === 'split' && salaryConfig.payments.length >= 2 ? ` pago em 2 vezes (dias ${salaryConfig.payments[0].day} e ${salaryConfig.payments[1].day})` : ''}{extraIncome > 0 ? ` somado a R$ ${extraIncome.toFixed(2)} de rendas extras neste mês` : ''}.
             </p>
             <p>
               • <strong>Gastos Fixos (R$ {fixedTotal.toFixed(2)}):</strong> Contas obrigatórias todo mês que você não pode deixar de pagar (Faculdade de R$ 1.035 e Linha de R$ 45).
