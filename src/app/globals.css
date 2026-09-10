@@ -3,18 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8f9fc;
-  --foreground: #09090b;
-  --card: #ffffff;
-  --card-border: #e2e8f0;
-  --accent-santander: #EC0000;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 .dark {
-  --background: #0a0a0c;
-  --foreground: #f4f4f5;
-  --card: #121216;
-  --card-border: #23232b;
+  --background: #09090b;
+  --foreground: #f8fafc;
 }
 
 body {
@@ -24,59 +19,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  transition: background-color 0.25s ease, color 0.25s ease;
-}
-
-/* Light mode overrides for cards */
-html:not(.dark) body {
-  background-color: #f4f5f8;
-  color: #0f172a;
-}
-
-html:not(.dark) .bg-\[\#121216\],
-html:not(.dark) .bg-\[\#141419\],
-html:not(.dark) .bg-\[\#18181b\] {
-  background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-}
-
-html:not(.dark) .bg-\[\#0a0a0c\] {
-  background-color: #f4f5f8 !important;
-}
-
-html:not(.dark) .bg-\[\#0c0c0f\]\/95,
-html:not(.dark) .bg-\[\#0a0a0c\]\/90 {
-  background-color: rgba(255, 255, 255, 0.92) !important;
-  border-color: #e2e8f0 !important;
-}
-
-html:not(.dark) .bg-zinc-900,
-html:not(.dark) .bg-zinc-900\/60,
-html:not(.dark) .bg-zinc-900\/80,
-html:not(.dark) .bg-zinc-900\/50 {
-  background-color: #f1f5f9 !important;
-  border-color: #e2e8f0 !important;
-}
-
-html:not(.dark) .text-white {
-  color: #0f172a !important;
-}
-
-html:not(.dark) .text-zinc-200,
-html:not(.dark) .text-zinc-300 {
-  color: #1e293b !important;
-}
-
-html:not(.dark) .text-zinc-400 {
-  color: #64748b !important;
-}
-
-html:not(.dark) .border-zinc-800,
-html:not(.dark) .border-zinc-800\/80,
-html:not(.dark) .border-zinc-800\/90,
-html:not(.dark) .border-zinc-700 {
-  border-color: #e2e8f0 !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Safe area insets para iPhone */
@@ -88,7 +31,7 @@ html:not(.dark) .border-zinc-700 {
   padding-top: env(safe-area-inset-top, 0.75rem);
 }
 
-/* Custom scrollbar */
+/* Scrollbar sutil */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -97,6 +40,9 @@ html:not(.dark) .border-zinc-700 {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: rgba(100, 116, 139, 0.2);
   border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #27272a;
 }

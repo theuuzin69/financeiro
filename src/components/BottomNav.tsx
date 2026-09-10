@@ -24,7 +24,7 @@ export function BottomNav({ activeTab, onChangeTab }: BottomNavProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#0c0c0f]/95 backdrop-blur-xl border-t border-zinc-800/80 px-2 sm:px-4 py-2 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0c0c0f]/95 backdrop-blur-xl border-t border-slate-200/90 dark:border-zinc-800/80 px-2 sm:px-4 py-2 pb-safe transition-colors shadow-lg dark:shadow-none">
       <div className="max-w-md mx-auto flex items-center justify-around">
         {tabs.map(tab => {
           const Icon = tab.icon;
@@ -36,11 +36,15 @@ export function BottomNav({ activeTab, onChangeTab }: BottomNavProps) {
               onClick={() => onChangeTab(tab.id)}
               className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl transition-all ${
                 isActive
-                  ? 'text-white scale-105 font-bold'
-                  : 'text-zinc-400 hover:text-zinc-200 font-medium'
+                  ? 'text-emerald-700 dark:text-emerald-400 font-bold scale-105'
+                  : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200 font-medium'
               }`}
             >
-              <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-zinc-800 text-emerald-400 shadow-sm' : ''}`}>
+              <div className={`p-1.5 rounded-xl transition-all ${
+                isActive 
+                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 shadow-xs' 
+                  : ''
+              }`}>
                 <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <span className="text-[10px] sm:text-[11px] mt-0.5 tracking-tight">{tab.label}</span>

@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
 import { DynamicAdvice, AdviceCategory } from '@/types';
 import { 
-  Sparkles, 
   Lightbulb, 
   TrendingUp, 
   ShieldCheck, 
   AlertTriangle, 
-  CheckCircle2, 
-  ArrowRight,
-  PiggyBank,
   Compass
 } from 'lucide-react';
 
@@ -27,53 +23,51 @@ export function DynamicAdviceSection({ adviceList, income }: DynamicAdviceProps)
   const getCategoryIcon = (cat: AdviceCategory) => {
     switch (cat) {
       case 'investment':
-        return <TrendingUp className="w-4 h-4 text-emerald-400" />;
+        return <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />;
       case 'emergency_fund':
-        return <ShieldCheck className="w-4 h-4 text-sky-400" />;
+        return <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400" />;
       case 'alert':
-        return <AlertTriangle className="w-4 h-4 text-amber-400" />;
+        return <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />;
       default:
-        return <Lightbulb className="w-4 h-4 text-yellow-400" />;
+        return <Lightbulb className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />;
     }
   };
 
   const getCardTone = (level: 'good' | 'attention' | 'urgent') => {
     switch (level) {
       case 'urgent':
-        return 'border-rose-800/80 bg-rose-950/30 text-rose-100';
+        return 'border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30';
       case 'attention':
-        return 'border-amber-800/80 bg-amber-950/30 text-amber-100';
+        return 'border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/30';
       default:
-        return 'border-zinc-800/80 bg-zinc-900/60 text-zinc-200';
+        return 'border-emerald-200/80 dark:border-zinc-800/80 bg-emerald-50/40 dark:bg-zinc-900/60';
     }
   };
 
   return (
-    <div className="bg-[#121216] border border-zinc-800/80 rounded-3xl p-5 sm:p-6 shadow-lg space-y-5">
+    <div className="bg-white dark:bg-[#121216] border border-slate-200/90 dark:border-zinc-800/80 rounded-3xl p-5 sm:p-6 shadow-sm dark:shadow-lg space-y-5 transition-colors">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-            <Compass className="w-3.5 h-3.5" />
-            Consultoria Financeira Pessoal
-          </div>
-          <h3 className="text-base sm:text-lg font-bold text-white mt-0.5">
-            Dicas & Investimentos para o seu Momento
-          </h3>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            Calculadas matematicamente com base na sua renda de R$ {income.toFixed(0)}, faculdade e compras reais
-          </p>
+      <div>
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+          <Compass className="w-3.5 h-3.5" />
+          Consultoria Financeira Pessoal
         </div>
+        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-0.5">
+          Dicas & Investimentos para o seu Momento
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+          Calculadas matematicamente com base na sua renda de R$ {income.toFixed(0)}, faculdade e compras reais
+        </p>
       </div>
 
-      {/* Filtros em Abas Leves */}
+      {/* Filtros em Abas Leves (sem botões pretos no tema claro) */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
         <button
           onClick={() => setFilter('all')}
           className={`px-3 py-1.5 rounded-full font-semibold shrink-0 transition-all ${
             filter === 'all'
-              ? 'bg-zinc-100 text-zinc-900 shadow'
-              : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+              ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-zinc-950 font-bold shadow-sm'
+              : 'bg-white hover:bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none'
           }`}
         >
           Todas as Dicas ({adviceList.length})
@@ -82,31 +76,31 @@ export function DynamicAdviceSection({ adviceList, income }: DynamicAdviceProps)
           onClick={() => setFilter('saving')}
           className={`px-3 py-1.5 rounded-full font-semibold shrink-0 flex items-center gap-1 transition-all ${
             filter === 'saving'
-              ? 'bg-yellow-400 text-zinc-950 shadow'
-              : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+              ? 'bg-amber-500 text-white font-bold shadow-sm'
+              : 'bg-white hover:bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none'
           }`}
         >
-          <Lightbulb className="w-3 h-3" /> Economia Real
+          <Lightbulb className="w-3 h-3 text-amber-500 dark:text-amber-400" /> Economia Real
         </button>
         <button
           onClick={() => setFilter('investment')}
           className={`px-3 py-1.5 rounded-full font-semibold shrink-0 flex items-center gap-1 transition-all ${
             filter === 'investment'
-              ? 'bg-emerald-500 text-zinc-950 shadow'
-              : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+              ? 'bg-emerald-600 text-white dark:bg-emerald-500 dark:text-zinc-950 font-bold shadow-sm'
+              : 'bg-white hover:bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none'
           }`}
         >
-          <TrendingUp className="w-3 h-3" /> Investimentos
+          <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Investimentos
         </button>
         <button
           onClick={() => setFilter('alert')}
           className={`px-3 py-1.5 rounded-full font-semibold shrink-0 flex items-center gap-1 transition-all ${
             filter === 'alert'
-              ? 'bg-rose-500 text-white shadow'
-              : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+              ? 'bg-rose-500 text-white font-bold shadow-sm'
+              : 'bg-white hover:bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none'
           }`}
         >
-          <AlertTriangle className="w-3 h-3" /> Alertas
+          <AlertTriangle className="w-3 h-3 text-rose-500" /> Alertas
         </button>
       </div>
 
@@ -115,39 +109,39 @@ export function DynamicAdviceSection({ adviceList, income }: DynamicAdviceProps)
         {filtered.map(advice => (
           <div
             key={advice.id}
-            className={`p-4 sm:p-5 rounded-2xl border transition-all ${getCardTone(advice.level)} space-y-2.5`}
+            className={`p-4 sm:p-5 rounded-2xl border transition-all ${getCardTone(advice.level)} space-y-2.5 shadow-sm dark:shadow-none`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-xl bg-black/40">
+                <div className="p-1.5 rounded-xl bg-white/90 dark:bg-black/40 border border-slate-200/80 dark:border-white/10 shadow-xs">
                   {getCategoryIcon(advice.category)}
                 </div>
-                <h4 className="font-bold text-sm sm:text-base text-white">
+                <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                   {advice.title}
                 </h4>
               </div>
 
               {advice.impactAmount && (
-                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-black/50 text-amber-300 shrink-0 border border-amber-500/20">
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-black/50 dark:text-amber-300 shrink-0 border border-amber-300 dark:border-amber-500/20">
                   Impacto: R$ {advice.impactAmount.toFixed(0)}
                 </span>
               )}
             </div>
 
-            <p className="text-xs font-semibold text-zinc-200">
+            <p className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
               {advice.summary}
             </p>
 
-            <p className="text-xs text-zinc-300 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-zinc-300 leading-relaxed">
               {advice.detailedAdvice}
             </p>
 
             {/* Ação Prática */}
-            <div className="mt-3 pt-2.5 border-t border-white/10 flex items-start gap-2 bg-black/25 p-3 rounded-xl text-xs text-zinc-100">
-              <span className="font-bold text-emerald-400 shrink-0 flex items-center gap-1">
+            <div className="mt-3 pt-2.5 border-t border-slate-200/80 dark:border-white/10 flex items-start gap-2 bg-white/90 dark:bg-black/30 p-3 rounded-xl text-xs text-slate-800 dark:text-zinc-200 border border-slate-200/70 dark:border-transparent shadow-xs">
+              <span className="font-bold text-emerald-700 dark:text-emerald-400 shrink-0 flex items-center gap-1">
                 👉 O que fazer:
               </span>
-              <span className="leading-relaxed">
+              <span className="leading-relaxed font-medium text-slate-700 dark:text-zinc-200">
                 {advice.suggestedAction}
               </span>
             </div>
@@ -155,7 +149,7 @@ export function DynamicAdviceSection({ adviceList, income }: DynamicAdviceProps)
         ))}
 
         {filtered.length === 0 && (
-          <div className="text-center py-8 text-zinc-500 text-xs">
+          <div className="text-center py-8 text-slate-400 dark:text-zinc-500 text-xs">
             Nenhuma recomendação nesta categoria no momento. Suas finanças estão tranquilas!
           </div>
         )}
