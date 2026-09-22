@@ -399,8 +399,24 @@ export function getAllTransactions(): Transaction[] {
 
 export async function addTransactionAsync(tx: Omit<Transaction, 'id' | 'createdAt'>): Promise<Transaction> {
   const db = await getDatabaseAsync();
+
+  let finalCategory = tx.category;
+  // Aprendizado inteligente: se a categoria for genérica, busca se o usuário já categorizou este mesmo comerciante antes
+  if (!finalCategory || finalCategory === 'Outros / Diversos') {
+    const normMerchant = tx.merchant.toLowerCase().trim();
+    const previous = db.transactions.find(t => 
+      t.merchant.toLowerCase().trim() === normMerchant && 
+      t.category && 
+      t.category !== 'Outros / Diversos'
+    );
+    if (previous) {
+      finalCategory = previous.category;
+    }
+  }
+
   const newTx: Transaction = {
     ...tx,
+    category: finalCategory,
     id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
     createdAt: new Date().toISOString(),
   };
@@ -412,8 +428,23 @@ export async function addTransactionAsync(tx: Omit<Transaction, 'id' | 'createdA
 
 export function addTransaction(tx: Omit<Transaction, 'id' | 'createdAt'>): Transaction {
   const db = readDatabase();
+
+  let finalCategory = tx.category;
+  if (!finalCategory || finalCategory === 'Outros / Diversos') {
+    const normMerchant = tx.merchant.toLowerCase().trim();
+    const previous = db.transactions.find(t => 
+      t.merchant.toLowerCase().trim() === normMerchant && 
+      t.category && 
+      t.category !== 'Outros / Diversos'
+    );
+    if (previous) {
+      finalCategory = previous.category;
+    }
+  }
+
   const newTx: Transaction = {
     ...tx,
+    category: finalCategory,
     id: 'tx_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
     createdAt: new Date().toISOString(),
   };
