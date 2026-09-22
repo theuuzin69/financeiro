@@ -176,7 +176,7 @@ export function IphoneShortcutGuide({ webhookSecret, onSimulateSuccess }: Iphone
               </div>
             </div>
 
-            <div className="bg-white dark:bg-black/40 p-3 rounded-xl border border-slate-200 dark:border-zinc-800/80 space-y-1 text-xs">
+            <div className="bg-white dark:bg-black/40 p-3.5 rounded-xl border border-slate-200 dark:border-zinc-800/80 space-y-2 text-xs">
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Método:</span> <strong className="text-slate-900 dark:text-white">POST</strong>
               </div>
@@ -184,7 +184,7 @@ export function IphoneShortcutGuide({ webhookSecret, onSimulateSuccess }: Iphone
                 <span>Cabeçalho:</span> <strong className="text-slate-900 dark:text-white">Content-Type: application/json</strong>
               </div>
               <div className="mt-2 text-slate-700 dark:text-zinc-300">
-                <span className="font-semibold block text-slate-600 dark:text-zinc-400 mb-1">Corpo da Requisição (JSON):</span>
+                <span className="font-semibold block text-slate-600 dark:text-zinc-400 mb-1">Corpo da Requisição (JSON no Atalhos):</span>
                 <pre className="bg-slate-100 dark:bg-zinc-950 p-2.5 rounded-lg text-[11px] text-emerald-800 dark:text-emerald-300 font-mono overflow-x-auto border border-slate-200 dark:border-transparent">
 {`{
   "amount": Entrada do Atalho (Valor),
@@ -194,6 +194,24 @@ export function IphoneShortcutGuide({ webhookSecret, onSimulateSuccess }: Iphone
   "secret": "${webhookSecret}"
 }`}
                 </pre>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 p-3 rounded-xl space-y-1.5 text-[11px] text-amber-900 dark:text-amber-200">
+                <p className="font-bold flex items-center gap-1.5">
+                  💡 Como selecionar cada campo no iPhone:
+                </p>
+                <p className="leading-relaxed">
+                  No app Atalhos, ao adicionar a variável <strong>Entrada do Atalho</strong> em cada campo, toque em cima dela para escolher a propriedade correta:
+                </p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-800 dark:text-amber-300 pl-1">
+                  <li>Em <code>amount</code>: selecione a propriedade <strong>Valor</strong>.</li>
+                  <li>Em <code>merchant</code>: selecione a propriedade <strong>Comerciante</strong> (não deixe solto).</li>
+                  <li>Em <code>category</code>: selecione a propriedade <strong>Categoria</strong>.</li>
+                  <li>Em <code>card</code>: selecione a propriedade <strong>Cartão</strong>.</li>
+                </ul>
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 pt-1">
+                  *(Nosso app aceita as chaves em inglês como <code>amount</code>/<code>merchant</code> ou em português como <code>valor</code>/<code>comerciante</code>!)*
+                </p>
               </div>
             </div>
           </div>

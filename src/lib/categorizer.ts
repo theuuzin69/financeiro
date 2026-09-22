@@ -169,8 +169,50 @@ const CATEGORY_RULES: CategoryRule[] = [
   },
 ];
 
-// Mapeamento de categorias padrão da Apple (Apple Pay Wallet)
+// Mapeamento completo de categorias da Apple (Apple Pay Wallet em PT-BR e EN)
 const APPLE_PAY_CATEGORY_MAP: Record<string, string> = {
+  // Português (Categorias nativas do iOS no Brasil)
+  'loja': 'Compras & Vestuário',
+  'lojas': 'Compras & Vestuário',
+  'compras': 'Compras & Vestuário',
+  'vestuário': 'Compras & Vestuário',
+  'vestuario': 'Compras & Vestuário',
+  'varejo': 'Compras & Vestuário',
+  'alimentação': 'Alimentação',
+  'alimentacao': 'Alimentação',
+  'alimentos e bebidas': 'Alimentação',
+  'alimentos & bebidas': 'Alimentação',
+  'restaurante': 'Alimentação',
+  'restaurantes': 'Alimentação',
+  'supermercado': 'Alimentação',
+  'supermercados': 'Alimentação',
+  'comida': 'Alimentação',
+  'transporte': 'Transporte',
+  'transportes': 'Transporte',
+  'viagem': 'Lazer & Entretenimento',
+  'viagens': 'Lazer & Entretenimento',
+  'entretenimento': 'Lazer & Entretenimento',
+  'lazer': 'Lazer & Entretenimento',
+  'saúde': 'Saúde & Bem-estar',
+  'saude': 'Saúde & Bem-estar',
+  'médico': 'Saúde & Bem-estar',
+  'medico': 'Saúde & Bem-estar',
+  'farmácia': 'Saúde & Bem-estar',
+  'farmacia': 'Saúde & Bem-estar',
+  'serviço': 'Serviços & Assinaturas',
+  'serviços': 'Serviços & Assinaturas',
+  'servico': 'Serviços & Assinaturas',
+  'servicos': 'Serviços & Assinaturas',
+  'assinaturas': 'Serviços & Assinaturas',
+  'educação': 'Educação',
+  'educacao': 'Educação',
+  'utilidades': 'Moradia & Contas',
+  'serviços públicos': 'Moradia & Contas',
+  'moradia': 'Moradia & Contas',
+  'casa': 'Moradia & Contas',
+  'contas': 'Moradia & Contas',
+
+  // Inglês (Padrão original Apple Wallet)
   'food & drink': 'Alimentação',
   'restaurants': 'Alimentação',
   'groceries': 'Alimentação',
@@ -206,7 +248,7 @@ export function autoCategorize(
     }
   }
 
-  // 2. Se a Apple passou categoria no Apple Pay
+  // 2. Se a Apple passou categoria no Apple Pay (PT ou EN)
   if (appleCategory) {
     const normApple = appleCategory.toLowerCase().trim();
     if (APPLE_PAY_CATEGORY_MAP[normApple]) {
@@ -228,7 +270,16 @@ export function autoCategorize(
     }
   }
 
-  // 3. Padrão para não categorizado
+  // 3. Verificação de fallback comum para maquininhas e Apple Pay ("Loja", "Mercado", "Varejo")
+  if (normalizedMerchant === 'loja' || normalizedMerchant === 'lojas' || normalizedMerchant.includes('loja')) {
+    return {
+      category: 'Compras & Vestuário',
+      cleanMerchant: clean === 'loja' ? 'Loja / Compras' : clean,
+      confidence: 'medium',
+    };
+  }
+
+  // 4. Padrão para não categorizado
   return {
     category: 'Outros / Diversos',
     cleanMerchant: clean,

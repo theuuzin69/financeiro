@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addTransaction } from '@/lib/storage';
+import { addTransactionAsync } from '@/lib/storage';
 import { autoCategorize } from '@/lib/categorizer';
 import { parseSantanderMessage } from '@/lib/bank-parsers';
 
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
       const amount = body.amount || 24.50;
       const catResult = autoCategorize(merchant, 'Food & Drink');
 
-      const tx = addTransaction({
+      const tx = await addTransactionAsync({
         amount,
         type: 'expense',
         merchant: catResult.cleanMerchant,
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Falha ao processar simulação PIX' }, { status: 400 });
       }
 
-      const tx = addTransaction({
+      const tx = await addTransactionAsync({
         amount: parsed.amount,
         type: 'expense',
         merchant: parsed.merchant,
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Falha ao processar simulação Cartão' }, { status: 400 });
       }
 
-      const tx = addTransaction({
+      const tx = await addTransactionAsync({
         amount: parsed.amount,
         type: 'expense',
         merchant: parsed.merchant,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addTransaction, getWebhookSecret } from '@/lib/storage';
+import { addTransactionAsync, getWebhookSecretAsync } from '@/lib/storage';
 import { parseSantanderMessage } from '@/lib/bank-parsers';
 import { autoCategorize, cleanMerchantName } from '@/lib/categorizer';
 import { parseBRLAmount } from '@/lib/bank-parsers';
@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Verificação do token de segurança
-    const expectedSecret = getWebhookSecret();
+    // Verificação do token de segurança assíncrona
+    const expectedSecret = await getWebhookSecretAsync();
     const providedSecret = 
       body.secret || 
       req.headers.get('x-webhook-secret') || 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       const catResult = autoCategorize(rawMerchant);
       const isPix = Boolean(body.isPix || String(body.paymentMethod).toLowerCase().includes('pix'));
 
-      const transaction = addTransaction({
+      const transaction = await addTransactionAsync({
         amount,
         type: 'expense',
         merchant: catResult.cleanMerchant,
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const transaction = addTransaction({
+    const transaction = await addTransactionAsync({
       amount: parsed.amount,
       type: 'expense',
       merchant: parsed.merchant,

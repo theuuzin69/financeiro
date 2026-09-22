@@ -1,33 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addTransactionAsync, getWebhookSecret } from '@/lib/storage';
+import { addTransactionAsync, getWebhookSecretAsync } from '@/lib/storage';
 import { autoCategorize, cleanMerchantName } from '@/lib/categorizer';
 import { parseBRLAmount } from '@/lib/bank-parsers';
 
 /**
  * Webhook para Automação Pessoal da Carteira do iPhone (Apple Pay)
- *
- * Configuração no app Atalhos do iOS:
- * Gatilho: Automação Pessoal > Transação (Qualquer cartão ou cartão específico)
- * Ação: Obter Conteúdo de URL (POST)
- * URL: https://seu-app.vercel.app/api/webhook/apple-pay
- * Cabeçalhos: Content-Type: application/json
- * Corpo do JSON:
- * {
- *   "amount": Atalho Entrada > Valor,
- *   "merchant": Atalho Entrada > Comerciante,
- *   "category": Atalho Entrada > Categoria,
- *   "card": Atalho Entrada > Cartão,
- *   "secret": "iphone_secret_key_santander_2026"
- * }
+ * Suporta chaves em Inglês e Português enviadas pelo app Atalhos do iOS.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    console.log('[Apple Pay Webhook] Recebido do iPhone:', JSON.stringify(body));
 
     // Verificação de autenticação de segurança do atalho
-    const expectedSecret = getWebhookSecret();
+    const expectedSecret = await getWebhookSecretAsync();
     const providedSecret = 
       body.secret || 
+      body.senha ||
       req.headers.get('x-webhook-secret') || 
       req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
 
@@ -38,8 +27,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Normalização dos valores recebidos pelo atalho
-    let rawAmount = body.amount;
+    // Normalização dos valores recebidos pelo atalho (suporte a chaves PT e EN)
+    const rawAmount = 
+      body.amount ?? 
+      body.valor ?? 
+      body.value ?? 
+      body.preco ?? 
+      body.quantia;
+
     let amount = 0;
     if (typeof rawAmount === 'number') {
       amount = Math.abs(rawAmount);
@@ -54,24 +49,87 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const rawMerchant = body.merchant || body.store || 'Comerciante Apple Pay';
-    const appleCategory = body.category || '';
-    const cardName = body.card || 'Apple Pay';
+    // Suporte flexível para Comerciante / Estabelecimento
+    const rawMerchantField = 
+      body.merchant ?? 
+      body.comerciante ?? 
+      body.estabelecimento ?? 
+      body.loja ?? 
+      body.store ?? 
+      body.nome ?? 
+      body.name ?? 
+      body.description ?? 
+      body.descricao;
 
-    // Categorização automática inteligente
-    const catResult = autoCategorize(rawMerchant, appleCategory);
+    let merchantCandidate = '';
+    if (typeof rawMerchantField === 'string') {
+      merchantCandidate = rawMerchantField.trim();
+    } else if (rawMerchantField && typeof rawMerchantField === 'object') {
+      merchantCandidate = rawMerchantField.name || rawMerchantField.comerciante || rawMerchantField.title || rawMerchantField.value || '';
+    }
 
-    // Gravação da transação
+    // Suporte flexível para Categoria do iOS
+    const rawCategoryField = 
+      body.category ?? 
+      body.categoria ?? 
+      body.tipo ?? 
+      body.setor;
+
+    let categoryCandidate = '';
+    if (typeof rawCategoryField === 'string') {
+      categoryCandidate = rawCategoryField.trim();
+    } else if (rawCategoryField && typeof rawCategoryField === 'object') {
+      categoryCandidate = rawCategoryField.name || rawCategoryField.categoria || rawCategoryField.value || '';
+    }
+
+    // Suporte flexível para Cartão
+    const rawCardField = 
+      body.card ?? 
+      body.cartao ?? 
+      body.cartão ?? 
+      body.cardName ?? 
+      body.conta;
+
+    const cardName = typeof rawCardField === 'string' && rawCardField.trim() && rawCardField.trim().toLowerCase() !== 'apple pay'
+      ? rawCardField.trim() 
+      : 'Carteira';
+
+    // Se o comerciante for genérico ou vazio, tenta melhorar o nome com base na categoria
+    let finalRawMerchant = merchantCandidate;
+    if (!finalRawMerchant || finalRawMerchant.toLowerCase() === 'comerciante apple pay' || finalRawMerchant.toLowerCase() === 'apple pay') {
+      if (categoryCandidate && categoryCandidate.toLowerCase() !== 'outros' && categoryCandidate.toLowerCase() !== 'diversos') {
+        finalRawMerchant = `Apple Pay (${categoryCandidate})`;
+      } else {
+        finalRawMerchant = 'Apple Pay';
+      }
+    }
+
+    // Categorização automática inteligente (com suporte completo a PT-BR)
+    const catResult = autoCategorize(finalRawMerchant, categoryCandidate);
+
+    // Data do lançamento
+    const rawDateField = body.date ?? body.data ?? body.timestamp ?? body.dataHora;
+    let txDate = new Date().toISOString();
+    if (rawDateField) {
+      try {
+        const parsedD = new Date(rawDateField);
+        if (!isNaN(parsedD.getTime())) {
+          txDate = parsedD.toISOString();
+        }
+      } catch {}
+    }
+
+    // Gravação da transação na nuvem Upstash
     const transaction = await addTransactionAsync({
       amount,
       type: 'expense',
       merchant: catResult.cleanMerchant,
-      rawMerchant,
+      rawMerchant: finalRawMerchant,
       category: catResult.category,
       source: 'apple_pay',
       paymentMethod: `Apple Pay (${cardName})`,
-      date: body.date ? new Date(body.date).toISOString() : new Date().toISOString(),
-      notes: appleCategory ? `Categoria Apple Pay: ${appleCategory}` : undefined,
+      date: txDate,
+      notes: categoryCandidate ? `Categoria Apple Pay: ${categoryCandidate}` : undefined,
     });
 
     return NextResponse.json({

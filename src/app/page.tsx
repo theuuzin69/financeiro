@@ -87,37 +87,53 @@ export default function Home() {
 
       let serverTransactions: Transaction[] = dataTx.transactions || [];
 
-      // 🛡️ PROTEÇÃO CONTRA PERDA EM DEPLOYS DA VERCEL:
-      // Se o servidor retornou dados válidos, salva um backup seguro no navegador
-      if (serverTransactions.length > 0) {
-        localStorage.setItem(`finance_backup_tx_${currentMonth}`, JSON.stringify(serverTransactions));
-      } else {
-        // Se o servidor voltou vazio (ex: deploy recente em container limpo sem KV conectado),
-        // mas este aparelho possui dados locais salvos:
-        try {
-          const rawBackup = localStorage.getItem(`finance_backup_tx_${currentMonth}`);
-          if (rawBackup) {
-            const parsedBackup: Transaction[] = JSON.parse(rawBackup);
-            if (Array.isArray(parsedBackup) && parsedBackup.length > 0) {
-              console.log('Restaurando dados locais salvos para o servidor...');
-              serverTransactions = parsedBackup;
-              // Envia para o servidor persistir
-              fetch('/api/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ transactions: parsedBackup }),
-              }).catch(console.error);
+      // 🛡️ PROTEÇÃO TOTAL CONTRA PERDA DE DADOS:
+      // Mescla bidirecional por ID: une os dados do servidor com o backup local deste dispositivo
+      let mergedTransactions: Transaction[] = [...serverTransactions];
+      try {
+        const rawBackup = localStorage.getItem(`finance_backup_tx_${currentMonth}`);
+        const parsedBackup: Transaction[] = rawBackup ? JSON.parse(rawBackup) : [];
+
+        if (Array.isArray(parsedBackup) && parsedBackup.length > 0) {
+          const txMap = new Map<string, Transaction>();
+          
+          // 1. Adiciona os itens do backup local
+          for (const t of parsedBackup) {
+            if (t && t.id && !String(t.id).startsWith('seed_') && !String(t.id).startsWith('tx_seed_')) {
+              txMap.set(t.id, t);
             }
           }
-        } catch (e) {
-          console.error('Erro ao restaurar backup local:', e);
+          
+          // 2. Mescla com os itens do servidor (prioridade para dados mais recentes)
+          for (const t of serverTransactions) {
+            if (t && t.id && !String(t.id).startsWith('seed_') && !String(t.id).startsWith('tx_seed_')) {
+              txMap.set(t.id, t);
+            }
+          }
+
+          mergedTransactions = Array.from(txMap.values())
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          // Se o backup local continha lançamentos ausentes no servidor, restaura na nuvem
+          if (mergedTransactions.length > serverTransactions.length) {
+            fetch('/api/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transactions: mergedTransactions }),
+            }).catch(console.error);
+          }
         }
+
+        // Salva o backup consolidado no navegador
+        localStorage.setItem(`finance_backup_tx_${currentMonth}`, JSON.stringify(mergedTransactions));
+      } catch (e) {
+        console.error('Erro ao sincronizar backup local:', e);
       }
 
       if (dataAnalytics.data) {
         setAnalytics(dataAnalytics.data);
       }
-      setTransactions(serverTransactions);
+      setTransactions(mergedTransactions);
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
     } finally {

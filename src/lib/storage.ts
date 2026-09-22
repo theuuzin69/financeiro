@@ -263,9 +263,12 @@ export async function getDatabaseAsync(): Promise<DatabaseSchema> {
     }
   }
 
-  // 4. Primeira inicialização caso não exista nada
+  // 4. Primeira inicialização caso não exista nada em absoluto
   const initial = getDefaultDatabase();
-  await saveDatabaseAsync(initial);
+  // Se Upstash está configurado mas não achou nada, grava o inicial
+  if (creds.url && creds.token) {
+    await saveDatabaseAsync(initial);
+  }
   memoryCache = initial;
   return initial;
 }
@@ -318,6 +321,7 @@ export async function saveDatabaseAsync(data: DatabaseSchema): Promise<void> {
 
 /**
  * Lê o banco de forma síncrona (com cache)
+ * IMPORTANTE: Nunca chama writeDatabase aqui para evitar sobrescrever Upstash em cold start!
  */
 export function readDatabase(): DatabaseSchema {
   if (memoryCache) {
@@ -347,14 +351,14 @@ export function readDatabase(): DatabaseSchema {
     }
   }
 
+  // Retorna padrão em memória sem gravar no Redis para proteger a base em nuvem
   const initial = getDefaultDatabase();
-  writeDatabase(initial);
   memoryCache = initial;
   return initial;
 }
 
 /**
- * Grava síncrono com disparo assíncrono para nuvem
+ * Grava síncrono com proteção contra sobrescrita indevida da nuvem
  */
 export function writeDatabase(data: DatabaseSchema): void {
   data.initialized = true;
@@ -367,8 +371,10 @@ export function writeDatabase(data: DatabaseSchema): void {
     console.error('Aviso ao escrever em disco:', err);
   }
 
+  // Trava de segurança: apenas sincroniza via fetch se houver transações
+  // para evitar que um estado recém-instanciado vazio destrua os dados da nuvem
   const creds = getUpstashCredentials();
-  if (creds.url && creds.token) {
+  if (creds.url && creds.token && Array.isArray(data.transactions) && data.transactions.length > 0) {
     fetch(creds.url, {
       method: 'POST',
       headers: {
@@ -775,6 +781,17 @@ export function updateBudget(month: string, budget: Partial<BudgetGoal>): Budget
   db.budgets[month] = updated;
   writeDatabase(db);
   return updated;
+}
+
+export async function getWebhookSecretAsync(): Promise<string> {
+  const db = await getDatabaseAsync();
+  return db.webhookSecret || DEFAULT_SECRET;
+}
+
+export async function setWebhookSecretAsync(secret: string): Promise<void> {
+  const db = await getDatabaseAsync();
+  db.webhookSecret = secret;
+  await saveDatabaseAsync(db);
 }
 
 export function getWebhookSecret(): string {
