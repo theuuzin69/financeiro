@@ -10,6 +10,7 @@ import { TransactionList } from '@/components/TransactionList';
 import { IphoneShortcutGuide } from '@/components/IphoneShortcutGuide';
 import { IncomeModal } from '@/components/IncomeModal';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
+import { CsvImportModal } from '@/components/CsvImportModal';
 import { BottomNav, TabType } from '@/components/BottomNav';
 import { 
   ChevronLeft, 
@@ -21,7 +22,8 @@ import {
   Sun,
   Moon,
   Database,
-  AlertCircle
+  AlertCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 
 export default function Home() {
@@ -36,6 +38,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean | null>(null);
   const [secretKey] = useState('iphone_secret_key_santander_2026');
 
@@ -248,6 +251,14 @@ export default function Home() {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsCsvModalOpen(true)}
+              className="w-8 h-8 rounded-xl bg-white hover:bg-slate-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 flex items-center justify-center text-slate-600 hover:text-emerald-600 dark:text-zinc-400 dark:hover:text-emerald-400 transition-colors shadow-xs"
+              title="Importar extrato CSV bancário"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+            </button>
+
+            <button
               onClick={() => loadData(true)}
               disabled={refreshing}
               className="w-8 h-8 rounded-xl bg-white hover:bg-slate-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 flex items-center justify-center text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors shadow-xs"
@@ -382,6 +393,7 @@ export default function Home() {
               transactions={transactions}
               onDelete={handleDeleteTransaction}
               onRefresh={loadData}
+              onOpenImportCsv={() => setIsCsvModalOpen(true)}
             />
           </div>
         )}
@@ -424,6 +436,12 @@ export default function Home() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={handleAddTransactionSuccess}
+      />
+
+      <CsvImportModal
+        isOpen={isCsvModalOpen}
+        onClose={() => setIsCsvModalOpen(false)}
+        onSuccess={() => loadData(true)}
       />
 
       {/* Barra Inferior */}

@@ -12,19 +12,23 @@ import {
   PenLine, 
   Clock,
   TrendingDown,
-  TrendingUp
+  TrendingUp,
+  FileSpreadsheet
 } from 'lucide-react';
+import { formatBRL } from '@/lib/formatters';
 
 interface TransactionListProps {
   transactions: Transaction[];
   onDelete: (id: string) => Promise<void>;
   onRefresh?: () => void;
+  onOpenImportCsv?: () => void;
 }
 
 export function TransactionList({
   transactions,
   onDelete,
   onRefresh,
+  onOpenImportCsv,
 }: TransactionListProps) {
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | 'expense' | 'income'>('all');
@@ -49,8 +53,8 @@ export function TransactionList({
   const getSourceBadge = (source: TransactionSource, type?: string) => {
     if (type === 'income') {
       return (
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800/50">
-          <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+        <span className="inline-flex items-center gap-1 text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800/50">
+          <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           Renda Extra
         </span>
       );
@@ -59,30 +63,30 @@ export function TransactionList({
     switch (source) {
       case 'apple_pay':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-sky-50 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800/40">
-            <Smartphone className="w-3 h-3 text-sky-600 dark:text-sky-400" />
+          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-sky-50 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 px-2.5 py-0.5 rounded-full border border-sky-200 dark:border-sky-800/40">
+            <Smartphone className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
             Apple Pay
           </span>
         );
       case 'santander_pix':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 px-2 py-0.5 rounded-full border border-teal-200 dark:border-teal-800/40">
-            <Zap className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800/40">
+            <Zap className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
             Santander PIX
           </span>
         );
       case 'santander_card':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800/40">
-            <CreditCard className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-800/40">
+            <CreditCard className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
             Cartão Santander
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-0.5 rounded-full border border-slate-200 dark:border-zinc-700">
-            <PenLine className="w-3 h-3 text-slate-500 dark:text-zinc-400" />
-            Manual
+          <span className="inline-flex items-center gap-1 text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-zinc-700">
+            <PenLine className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
+            Manual / CSV
           </span>
         );
     }
@@ -109,7 +113,7 @@ export function TransactionList({
   return (
     <div className="bg-white dark:bg-[#121216] border border-slate-200/90 dark:border-zinc-800/80 rounded-3xl p-5 shadow-sm dark:shadow-lg space-y-4 transition-colors">
       {/* Cabeçalho do Extrato */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
             Extrato de Lançamentos
@@ -118,6 +122,17 @@ export function TransactionList({
             {filtered.length} {filtered.length === 1 ? 'registro encontrado' : 'registros encontrados'}
           </p>
         </div>
+
+        {onOpenImportCsv && (
+          <button
+            onClick={onOpenImportCsv}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 text-xs font-bold text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700/60 transition-all shadow-xs shrink-0"
+            title="Importar extrato bancário em CSV"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            Importar CSV
+          </button>
+        )}
       </div>
 
       {/* Barra de Busca e Filtros */}
@@ -222,16 +237,16 @@ export function TransactionList({
                       </h4>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className="text-[11px] text-slate-600 dark:text-zinc-400 font-medium">
+                      <span className="text-xs text-slate-600 dark:text-zinc-400 font-medium">
                         {tx.category}
                       </span>
-                      <span className="text-slate-300 dark:text-zinc-600 text-[10px]">•</span>
-                      <span className="text-[10px] text-slate-500 dark:text-zinc-400 flex items-center gap-0.5">
-                        <Clock className="w-2.5 h-2.5" />
+                      <span className="text-slate-300 dark:text-zinc-600 text-xs">•</span>
+                      <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1 font-medium">
+                        <Clock className="w-3 h-3" />
                         {formatDate(tx.date)}
                       </span>
                     </div>
-                    <div className="mt-1">
+                    <div className="mt-1.5">
                       {getSourceBadge(tx.source, tx.type)}
                     </div>
                   </div>
@@ -244,9 +259,9 @@ export function TransactionList({
                         ? 'text-emerald-600 dark:text-emerald-400' 
                         : 'text-slate-900 dark:text-white'
                     }`}>
-                      {isIncome ? '+ ' : '- '}R$ {tx.amount.toFixed(2)}
+                      {isIncome ? '+ ' : '- '}{formatBRL(tx.amount)}
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 block truncate max-w-[110px]">
+                    <span className="text-xs text-slate-500 dark:text-zinc-400 block truncate max-w-[120px]">
                       {tx.paymentMethod}
                     </span>
                   </div>
@@ -303,7 +318,7 @@ export function TransactionList({
               <div className="text-slate-500 dark:text-zinc-400 flex justify-between items-center">
                 <span>{txToDelete.category}</span>
                 <span className={`font-bold ${txToDelete.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
-                  {txToDelete.type === 'income' ? '+ ' : '- '}R$ {txToDelete.amount.toFixed(2)}
+                  {txToDelete.type === 'income' ? '+ ' : '- '}{formatBRL(txToDelete.amount)}
                 </span>
               </div>
             </div>

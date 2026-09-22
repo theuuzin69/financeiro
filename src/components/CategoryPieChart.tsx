@@ -1,5 +1,6 @@
 import React from 'react';
 import { CategoryIcon } from './CategoryIcon';
+import { formatBRL } from '@/lib/formatters';
 
 interface CategoryData {
   category: string;
@@ -27,7 +28,7 @@ export function CategoryBreakdown({ categories, totalSpent }: CategoryBreakdownP
           Gastos por Categoria
         </h3>
         <span className="text-xs text-slate-500 dark:text-zinc-400">
-          Total: <strong className="text-slate-900 dark:text-zinc-200">R$ {totalSpent.toFixed(2)}</strong>
+          Total: <strong className="text-slate-900 dark:text-zinc-200 font-bold">{formatBRL(totalSpent)}</strong>
         </span>
       </div>
 
@@ -47,7 +48,7 @@ export function CategoryBreakdown({ categories, totalSpent }: CategoryBreakdownP
           ))}
         </div>
       ) : (
-        <div className="h-3.5 w-full rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] text-slate-400 dark:text-zinc-500">
+        <div className="h-3.5 w-full rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center text-xs text-slate-400 dark:text-zinc-500">
           Nenhuma despesa registrada
         </div>
       )}
@@ -61,7 +62,7 @@ export function CategoryBreakdown({ categories, totalSpent }: CategoryBreakdownP
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2.5">
                   <div 
-                    className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0"
+                    className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-xs"
                     style={{ backgroundColor: `${cat.color}20`, color: cat.color }}
                   >
                     <CategoryIcon name={cat.category} className="w-4 h-4" />
@@ -70,24 +71,24 @@ export function CategoryBreakdown({ categories, totalSpent }: CategoryBreakdownP
                     <span className="font-semibold text-slate-800 dark:text-zinc-200 text-xs sm:text-sm block">
                       {cat.category}
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium">
-                      Teto: R$ {cat.budget.toFixed(2)}
+                    <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">
+                      Teto: {formatBRL(cat.budget)}
                     </span>
                   </div>
                 </div>
 
                 <div className="text-right">
                   <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm block">
-                    R$ {cat.amount.toFixed(2)}
+                    {formatBRL(cat.amount)}
                   </span>
-                  <span className={`text-[10px] font-semibold ${isOver ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-zinc-400'}`}>
-                    {cat.budgetPercentage}% do limite
+                  <span className={`text-xs font-semibold ${isOver ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-zinc-400'}`}>
+                    {cat.budgetPercentage}% do teto
                   </span>
                 </div>
               </div>
 
               {/* Barra de progresso individual */}
-              <div className="w-full bg-slate-100 dark:bg-zinc-800/80 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-slate-100 dark:bg-zinc-800/80 rounded-full h-2 overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     isOver ? 'bg-rose-500' : cat.budgetPercentage > 80 ? 'bg-amber-500' : 'bg-emerald-500'
